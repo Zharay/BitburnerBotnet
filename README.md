@@ -17,6 +17,44 @@ A TL;DR  for those who don't want the full details.
 4. To get a readout of the botnet go to Active Scripts > Home > check-status.js > LOG
 5. PROFIT
 
+## Getting Started
+Lets assume you are starting fresh (either in a brand new game or a new BitNode) and have 32GB of RAM. Just follow these steps and after a few hours (if at hack level 1) you should be making a few billion quiet easily.
+
+1. Open coordinator.js and perform the following changes
+	- `minServerGrowth = 1`
+	- `minServerMoney = 1`
+2. Open buy-server.js and perform the following changes
+	- `spendPercentage = 0.2`
+3. (Optional) If you do not have access to the stock market or you do not have 64GB of RAM on your home machine
+	- Open restart-scripts.js and perform the following changes
+		- `skipStockBot = true` (requires a $6b buy in)
+		- `skipBuyServer = true` (requires you have 64GB of RAM to run concurrently)
+4. In terminal run restart-scripts.js
+	- It should now start auto-spreader-v2, coordinator, hack-daemon, check-status, and hacknet-mgr scripts
+	- Your first few remote bots will start working on the servers that fit the criteria set in coordinator.js
+5. Go to Active Scripts > home > check-status and open up the LOG.
+	- Keep this open! It will give you real-time information on your botnet and the servers you are targeting
+6. Let everything run for a while. Eventually you'll reach enough hack skill to make your first few programs.
+	- Once you have BruteSSH.exe, auto-spreader will automatically root servers that require 1 port and add them to your botnet.
+	- I suggest getting a job to earn some extra dough. The first few hours can be very slow.
+7. Once you have enough hack skill, you will start to see targets in your check-status window that are more profitable.
+	- In coordinator.js : `minServerGrowth = 20` (or 30)
+	- In coordinator.js : `minServerMoney = 1e7` (or 1e6) (1e7 is a shorthand way of expressing 10^7 = 10 million)
+	- Either kill all scripts or run sendKill.js and wait for the current threads to finish
+	- Run restart-scripts.js
+8. Wait! We need $200k for a TOR access (bought at computer store in city) then an additional $1m (?)
+	- Keep doing works at jobs as you increase in hack skill! Every bit helps.
+9. connect to the darkweb and buy what you can (FTPCrack.exe and relaySMTP.exe are top priority)
+	- Doing so will add way more to the botnet!
+10. Upgrade your home computer's RAM to 64GB and set `skipBuyServer = false` in restart-scripts.js
+	- Alternatively, just run buy-server.js in your terminal
+11. Buy the rest of the port programs from the darkweb (HTTPWorm.exe = $30m and SQLInjec.exe = $250m)
+12. You are practically done. The game is now your plaything.
+
+These are the exact steps I took starting BitNode1.2. 9 hours later and the image below is where I am sitting at with my Hack skill at 416!
+
+![9 hours into BitNode1.2](/ss/Screenshot4.jpg)
+
 # Preface
 Like everyone I started small with the tutorial scripts. I wanted everything to be dynamic, with no hard coded server names as I feel that'd defeat the purpose of this whole game ("lol not cheating in a game promoting hacking and embezzlement"). Once I got something working, I kept asking myself: "Is this efficient enough?"
 
