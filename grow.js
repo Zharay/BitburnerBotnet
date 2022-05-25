@@ -43,9 +43,6 @@ export async function main(ns) {
 		ns.print("Security Risk: " + security);
 	}
 
-	var moneyTreshold = ns.getServerMaxMoney(target) * 0.98;
-	var startMoney = ns.getServerMoneyAvailable(target);
-
 	var task = {"target" : target, "host" : host, "task" : "grow", "done" : false, "threads" : threads, "ram" : ram, "security" : security};
 
 	if (host != "EXP") {
@@ -58,7 +55,6 @@ export async function main(ns) {
 
 	ns.print("Growing money...");
 	await ns.grow(target);
-	ns.print("Gained: " + ns.nFormat(ns.getServerMoneyAvailable(target) - startMoney, "$0.000 a").toUpperCase() + " (Threshold: " + ns.nFormat(moneyTreshold, "$0.000 a").toUpperCase() + ")");
 	
 	task.done = true;
 	task.security *= -1;

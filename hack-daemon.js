@@ -1,10 +1,10 @@
 /** @param {NS} ns */
 export async function main(ns) {
-	var debug = false;
-	if (!debug) ns.disableLog("ALL");
+	ns.disableLog("ALL");
 
-	var homeCPU = 6;
-	var expRuns = 2;
+	const debug = false;	// 	Enables debug logs. 
+	const homeCPU = 1;		//	The number of CPUs on your home server. Better to just set it here than waste RAM
+	const expRuns = 2;		//	The number of cycles to complete before looking to using your remaining RAM on EXP farms
 
 	var host = ns.getHostname();
 	ns.print("Host: " + host);
@@ -28,6 +28,8 @@ export async function main(ns) {
 	var gExp = ns.getPortHandle(5);
 	var gLock = ns.getPortHandle(6);
 	var outLock = ns.getPortHandle(15);
+	var fHostKill = ns.getPortHandle(18);
+	var fKill = ns.getPortHandle(20);
 
 	while (gTargets.peek() == "NULL PORT DATA") {
 		ns.print("Waiting for targets to be added by coordinator...")
@@ -36,7 +38,7 @@ export async function main(ns) {
 
 	var randWait = 1000 * Math.floor(randomIntFromInterval(3, 30));
 	ns.print("Waiting for [" + (randWait / 1000) + "] seconds");
-	if (!debug) await ns.sleep(randWait);
+	await ns.sleep(randWait);
 
 	var jTargets = JSON.parse(gTargets.peek());
 	var jStatus = JSON.parse(gStatus.peek());
@@ -47,12 +49,10 @@ export async function main(ns) {
 	var weakenID = new Array(jTargets.length).fill(0);
 	var growID = new Array(jTargets.length).fill(0);
 	var hackID = new Array(jTargets.length).fill(0);
-
-	var fKill = ns.getPortHandle(20);
 	
 	var curRuns = 0;
 
-	while(fKill.peek() == "NULL PORT DATA") {
+	while(fKill.peek() == "NULL PORT DATA" && fHostKill.peek() != host) {
 		jTargets = JSON.parse(gTargets.peek());
 
 		ns.print("-----------------Starting Loop-------------------");
@@ -65,6 +65,9 @@ export async function main(ns) {
 			jLockRequest.target = target;
 			threshModifier = jTargets[indexTarget].thresholdModifier;
 			var currentLocks = jLocks.find(x => x.target == target);
+
+			if (fHostKill.peek() == host)
+				break;
 
 			/** Weaken: <NOTE: The more threads tossed at it the better.>
 			 * We only weaken if : 	1) We are close to the min threshold
@@ -116,7 +119,6 @@ export async function main(ns) {
 						weakenID[indexTarget] = ns.run("weaken.js", numThreads, target, host, numThreads, ns.getScriptRam("weaken.js")*numThreads, 0);
 					} else {
 						ns.print(`[${target}] Skipping weaken. Enough threads working on it. [${numThreads} / ${currentThreads}]`);
-						//ns.print("(" + ns.getServerSecurityLevel(target) + " + " + (jStatus[indexTarget].security > 5 ? jStatus[indexTarget].security : 0) + " - " + securityThreshold + ") / 0.05");
 					}
 
 					ns.print("Sleeping for 1 sec...")
@@ -131,6 +133,9 @@ export async function main(ns) {
 			} else if (currentLocks.weakenLock != "") {
 				ns.print(`[${target}] LOCKED : [${currentLocks.weakenLock}] has locked weakening...`);
 			}
+		
+			if (fHostKill.peek() == host)
+				break;
 		
 			await ns.sleep(400);
 			jStatus = JSON.parse(gStatus.peek());
@@ -205,6 +210,9 @@ export async function main(ns) {
 				ns.print(`[${target}] LOCKED : [${currentLocks.growLock}] has locked growth...`);
 			}
 
+			if (fHostKill.peek() == host)
+				break;
+
 			await ns.sleep(400);
 			jStatus = JSON.parse(gStatus.peek());
 			jLocks = JSON.parse(gLock.peek());
@@ -273,6 +281,10 @@ export async function main(ns) {
 
 		}
 
+
+		if (fHostKill.peek() == host)
+			break;
+
 		/**EXP Farm!
 		 * 	We only go into this if we have enough RAM to do so after going trough all our targets.
 		 */
@@ -280,33 +292,36 @@ export async function main(ns) {
 		var availableRAM = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
 		var minRamRequired = (ns.getScriptRam("weaken.js") + ns.getScriptRam("grow.js") + ns.getScriptRam("hack.js"));
 		ns.print(`EXP Ram Left: ${availableRAM} (Req: ${minRamRequired})`);
-		if (availableRAM >= minRamRequired && jExp.length > 0 && curRuns < expRuns) {
+		if (availableRAM >= minRamRequired && jExp.length > 0 && curRuns >= expRuns) {
 			ns.print("Dedicating free RAM to EXP Farming...");
 			
 			var farmIndex = randomIntFromInterval(1, jExp.length) - 1;
 			ns.print("[EXP] You have chosen [" + jExp[farmIndex].target + "]");
-			var allScript = ns.getScriptRam("hack.js") + ns.getScriptRam("weaken.js") + ns.getScriptRam("grow.js");
-			
-			var weakThreads = Math.floor((availableRAM / ns.getScriptRam("weaken.js")) * (ns.getScriptRam("weaken.js") / allScript));
-			var growThreads = Math.floor((availableRAM / ns.getScriptRam("grow.js")) * (ns.getScriptRam("grow.js") / allScript));
-			var hackThreads = Math.floor((availableRAM / ns.getScriptRam("hack.js")) * (ns.getScriptRam("hack.js") / allScript));
 
+			// We split avaiable RAM by a 40/40/20% split. Hacking always goes too fast and is too devistating otherwise.
+			var weakThreads = Math.floor((availableRAM * 0.4) / ns.getScriptRam("weaken.js"));
+			var growThreads = Math.floor((availableRAM * 0.4) / ns.getScriptRam("grow.js"));
+			var hackThreads = Math.floor((availableRAM * 0.2) / ns.getScriptRam("hack.js"));
 
-			if (weakThreads > 0) {
+			if (weakThreads >= 1) {
 				ns.print("[EXP] Running " + weakThreads + " weakens on [" + jExp[farmIndex].target + "]");
 				ns.run("weaken.js", weakThreads, jExp[farmIndex].target, "EXP", weakThreads);				
 			}
-			if (growThreads > 0) {
+			if (growThreads >= 1) {
 				ns.print("[EXP] Running " + growThreads + " growths on [" + jExp[farmIndex].target + "]");
 				ns.run("grow.js", growThreads, jExp[farmIndex].target, threshModifier, "EXP", growThreads);				
 			}
-			if (hackThreads > 0) {
+			if (hackThreads >= 1) {
 				ns.print("[EXP] Running " + hackThreads + " hacks on [" + jExp[farmIndex].target + "]");
 				ns.run("hack.js", hackThreads, jExp[farmIndex].target, "EXP", hackThreads);				
 			}
+			
+			curRuns = 0;
 		}
 		else if (curRuns < expRuns) curRuns++;
-		else if (curRuns == expRuns) curRuns = 0;
+
+		if (fHostKill.peek() == host)
+			break;
 
 		randWait = 1000 * Math.floor(randomIntFromInterval(3, 5));
 		ns.print("Waiting for [" + (randWait / 1000) + "] seconds");
@@ -314,6 +329,11 @@ export async function main(ns) {
 
 	}
 
+	// The only thing that can make this request is buy-server
+	if (fHostKill.peek() == host) {
+		fHostKill.read();
+		ns.print(`[${host}] was requested to kill itself. Cleared request!`);
+	}
 }
 
 /** @param {min} min number

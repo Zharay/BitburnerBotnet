@@ -1,6 +1,6 @@
 /** @param {NS} ns **/
 export async function main(ns) {
-	let maxIncome = Math.pow(10, 6);
+	let maxIncome = 1e9;
 	let spendPercentage = 0.1;
 
 	if (ns.args.length)
@@ -78,6 +78,7 @@ export async function main(ns) {
 	ns.print('Hacknet fully upgraded.');
 }
 
+/** @param {NS} ns **/
 function levelUpgradeCostTotal(ns, level) {
 	let mult = ns.getHacknetMultipliers().levelCost;
 	let result = 0;
@@ -91,6 +92,7 @@ function levelUpgradeCostTotal(ns, level) {
 	return result;
 }
 
+/** @param {NS} ns **/
 function ramUpgradeCostTotal(ns, ram) {
 	let mult = ns.getHacknetMultipliers().ramCost;
 	let result = 0;
@@ -104,6 +106,7 @@ function ramUpgradeCostTotal(ns, ram) {
 	return result;
 }
 
+/** @param {NS} ns **/
 function coreUpgradeCostTotal(ns, cores) {
 	let mult = ns.getHacknetMultipliers().coreCost;
 	let result = 0;
@@ -117,7 +120,7 @@ function coreUpgradeCostTotal(ns, cores) {
 	return result;
 }
 
-
+/** @param {NS} ns **/
 function nodeProdPerCost(ns) {
 	if (ns.hacknet.numNodes() == ns.hacknet.maxNumNodes())
 		return 0;
@@ -131,6 +134,7 @@ function nodeProdPerCost(ns) {
 	return ns.hacknet.getNodeStats(0).production / (nodeCost + levelCost + ramCost + coreCost);
 }
 
+/** @param {NS} ns **/
 function levelProdPerCost(ns, x, y, z) {
 	if (x == 200)
 		return 0;
@@ -142,6 +146,7 @@ function levelProdPerCost(ns, x, y, z) {
 	return prodGain / levelCost;
 }
 
+/** @param {NS} ns **/
 function ramProdPerCost(ns, x, y, z) {
 	if (y == 64)
 		return 0;
@@ -153,6 +158,7 @@ function ramProdPerCost(ns, x, y, z) {
 	return prodGain / ramCost;
 }
 
+/** @param {NS} ns **/
 function coreProdPerCost(ns, x, y, z) {
 	if (z == 16)
 		return 0;
@@ -164,6 +170,7 @@ function coreProdPerCost(ns, x, y, z) {
 	return prodGain / coreCost;
 }
 
+/** @param {NS} ns **/
 function bestNodeUpgrade(ns, index) {
 	let bestUpgrade = 'X';
 	let node = ns.hacknet.getNodeStats(index);
@@ -198,6 +205,7 @@ function bestNodeUpgrade(ns, index) {
 	return bestUpgrade;
 }
 
+/** @param {NS} ns **/
 async function waitForCash(ns, cost, spendPercentage) {
 	if ((ns.getServerMoneyAvailable("home") * spendPercentage) < cost)
 		ns.print('Not enough money. Waiting for funds to reach: ' + ns.nFormat((ns.getServerMoneyAvailable("home") * spendPercentage), "$0.00a") + ' / ' + ns.nFormat(cost, "$0.00a"));
@@ -210,6 +218,7 @@ async function waitForCash(ns, cost, spendPercentage) {
 		ns.exit();
 }
 
+/** @param {NS} ns **/
 async function upgradeToMatch(ns, baseIndex, spendPercentage) {
 	ns.print('Upgrading Nodes to match Node ' + baseIndex + '.');
 	let baseNode = ns.hacknet.getNodeStats(baseIndex);

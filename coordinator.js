@@ -1,13 +1,14 @@
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
-	var debug = false;
 
 	// Options
-	var threshModifier 	= 0.75;		// Money threshold that we hack towards (we always grow to 100%)
-	var minHackChance 	= 0;	 	// Min hack chance to target
-	var minServerGrowth	= 30;		// Min server growth to target
-	var minServerMoney = 1 * 1e9;	// Min money the server has at its maximum to target (10^9 = $1.0b)
+	const debug 			= false;		// Enables multiple log messages. Leave this alone unless you want lag.
+	const threshModifier 	= 0.75;			// Money threshold that we hack towards (we always grow to 100%)
+	const minHackChance 	= 0;	 		// Min hack chance to target
+	const minServerGrowth	= 25;			// Min server growth to target
+	const minServerMoney 	= 1e6;			// Min money the server has at its maximum to target (10^9 = $1.0b)
+	const loopInterval 		= 500;			// Amount of time the coordinator waits per loop. Can be CPU intensive.
 
 	// Arguement handling
 	var hackTargets = [];
@@ -47,6 +48,7 @@ export async function main(ns) {
 	 * 	14 : HOME : RAW STACk JSON {EXP being worked on, Task, Done?, Threads, RAM}
 	 * 	15 : HOME : RAW STACK JSON {Target for lock, Host, Task, Done?} 
 	 * 	...
+	 *  18 : FLAG : RAW STACK String (Specific hostname to kill softly)
 	 * 	19 : FLAG : RAW String (Sell all command [anytext])
 	 * 	20 : FLAG : RAW String (Kill all command [anytext])	
 	 */
@@ -99,7 +101,7 @@ export async function main(ns) {
 	});
 	expTargets = expTargets.filter ( (e) => !hackTargets.includes(e) );
 	expTargets.forEach( function(x) {
-		ns.tprint("EXP SERVER: " + x);
+		ns.print("EXP SERVER: " + x);
 		jExpStatus.push({"target" : x, 
 							"hackThreads" : 0, "hackRam" : 0, 
 							"weakenThreads" : 0, "weakenRam" : 0,
@@ -111,7 +113,6 @@ export async function main(ns) {
 	 * 					Does not have root access yet
 	 */
 	hardTargets = hardTargets.filter ( x => ns.getServerRequiredHackingLevel(x) > ns.getPlayer().hacking || !ns.hasRootAccess(x) );
-	ns.print(hardTargets.toString());
 	hardTargets.forEach ( function(x) {
 		jHardTargetServers.push({"target" : x, "thresholdModifier": threshModifier, 
 								"maxMoney" : ns.getServerMaxMoney(x), "curMoney" : ns.getServerMoneyAvailable(x),
@@ -225,7 +226,7 @@ export async function main(ns) {
 		// 3. Update gHosts - The global list of all hosts (Port 2)
 		gHosts.clear();
 		gHosts.tryWrite(JSON.stringify(jHostServers));
-		//ns.print("Hosts updated!");
+		if(debug) ns.print("Hosts updated!");
 
 		// 4. Check task queue - Brought in from hack.js, weaken.js, and grow.js  (Port 13)
 		while (!inTasks.empty()) {
@@ -344,7 +345,7 @@ export async function main(ns) {
 					jExpStatus.push(addLock);
 
 				} else {
-					//ns.print(`[LOCK] Processing Lock request for [${newLock.task} : ${newLock.target}] from [${newLock.host}] [${(newLock.done ? "-" : "+")}]`);
+					if(debug) ns.print(`[LOCK] Processing Lock request for [${newLock.task} : ${newLock.target}] from [${newLock.host}] [${(newLock.done ? "-" : "+")}]`);
 					
 					/**For each case we:
 					 * 		Do not allow change of lock if the lock is still in effect (10sec limit)
@@ -408,19 +409,19 @@ export async function main(ns) {
 		// 7. Update gTargets -- Global list of all the target servers. Used mainly by check-status (Port 1)
 		jTargetServers = [];
 		hackTargets.forEach( function(x) {
-		jTargetServers.push( {"target" : x, "thresholdModifier": threshModifier, 
+			jTargetServers.push( {"target" : x, "thresholdModifier": threshModifier, 
 								"maxMoney" : ns.getServerMaxMoney(x), "curMoney" : ns.getServerMoneyAvailable(x),
 								"growth" : ns.getServerGrowth(x), "security" : ns.getServerSecurityLevel(x), 
 								"minSecurity" : ns.getServerMinSecurityLevel(x),});
 		} );
 		gTargets.clear();
 		gTargets.tryWrite(JSON.stringify(jTargetServers));
-		//ns.print("Update global targets!");
+		if(debug) ns.print("Update global targets!");
 		
 		// 8. Update gStatus -- Global list of each target's status. Used by hack-daemon to make decision on how many threads to use. (Port 3)
 		gStatus.clear();
 		gStatus.tryWrite(JSON.stringify(jTargetStatus));
-		//ns.print("Target status updated!");
+		if(debug) ns.print("Target status updated!");
 
 		// 9. Update gExp -- Global list of all EXP targets. Same as status. Only really used by check-status (Port 5)
 		gExp.clear();
@@ -463,8 +464,8 @@ export async function main(ns) {
 		jGlobalStatus.usedRam = tUsedRam;
 		gRam.clear();
 		gRam.tryWrite(JSON.stringify(jGlobalStatus));
-		//ns.print("Updated RAM info!");
+		if(debug) ns.print("Updated RAM info!");
 
-		await ns.sleep(1000);
+		await ns.sleep(loopInterval);
 	}
 }

@@ -1,6 +1,10 @@
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
+
+	// Options
+	const showTargetCount = false;
+	const showHostCount = false;
 	
 	var serverProcesses = ns.ps();
 	var coordinatorID = 0;
@@ -11,6 +15,7 @@ export async function main(ns) {
 	});
 
 	var gTargets = ns.getPortHandle(1);
+	var gHosts = ns.getPortHandle(2);
 	var gStatus = ns.getPortHandle(3);
 	var gRam = ns.getPortHandle(4);
 	var gExp = ns.getPortHandle(5);
@@ -27,6 +32,7 @@ export async function main(ns) {
 		ns.clearLog();
 
 		var rawTargets = gTargets.peek();
+		var rawHosts = gHosts.peek();
 		var rawStatus = gStatus.peek();
 		var rawRam = gRam.peek();
 		var rawExp = gExp.peek();
@@ -78,6 +84,14 @@ export async function main(ns) {
 			if (isNaN(jRam.usedRam) || isNaN(jRam.totalRam))
 				continue;
 			ns.print(`${ns.nFormat(jRam.usedRam * Math.pow(1000,3), "0.00b")} / ${ns.nFormat(jRam.totalRam * Math.pow(1000,3), "0.00b")} (${ns.nFormat( (jRam.totalRam == 0 ? 0 : jRam.usedRam / jRam.totalRam), '0.000%')})`);
+		}
+
+		if (showTargetCount && rawTargets != "NULL PORT DATA") {
+			ns.print(`Number of Targets: ${JSON.parse(rawTargets).length}`);
+		}
+
+		if (showHostCount && rawHosts != "NULL PORT DATA") {
+			ns.print(`Number of Hosts: ${JSON.parse(rawHosts).length}`);
 		}
 		
 		ns.print(`Runtime: ${ns.tFormat(runTime*1000)}`);

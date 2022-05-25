@@ -158,7 +158,7 @@ export async function main(ns) {
 		
 		if (lastSell.stock) {
 			ns.print(" ");
-			ns.print(`Last Sell: ${ns.nFormat(lastSell.numShares,"0a")} shares of ${lastSell.stock} for ${ns.nFormat(lastSell.profit, "$0.000a")} ${lastSell.sellOff ? "as a sell off" : ""}`);
+			ns.print(`Last Sell: ${ns.nFormat(lastSell.numShares,"0a")} shares of ${lastSell.stock} for ${ns.nFormat(-lastSell.profit, "$0.000a")} ${lastSell.sellOff ? "as a sell off" : ""}`);
 			ns.print(`Sell Time: ${ns.tFormat(lastSellTime)} ago`);
 		}
 
