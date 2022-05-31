@@ -4,17 +4,23 @@ export async function main(ns) {
 
 	// Options
 	const skipStockBot = true;
-	const skipBuyServer = true;
+	const skipHacknetMgr = false;
+	const skipBuyServer = false;
+	const skipCorpo = true;
 
 	// First kill all process on home machine except this script and stock-bot
 	ns.tprint("Killing home processes.")
 	var processes = ns.ps();
 	var isStockBot = false;
+	var isCorpo = false;
 	processes.forEach( function(x) {
-		if (x.filename != "restart-scripts.js" && x.filename != "stock-bot.js" && x.filename != "stock-bot-v2.js") 
+		if (x.filename != "restart-scripts.js" && x.filename != "stock-bot.js" 
+				&& x.filename != "stock-bot-v2.js" && x.filename != "corpo.js")
 			ns.kill(x.pid);
 		else if (x.filename == "stock-bot.js" || x.filename != "stock-bot-v2.js")
 			isStockBot = true;
+		else if (x.filename == "corpo.js")
+			isCorpo = true;
 	} );
 
 	// We can make use port 2 to kill any servers running a hack-daemon!
@@ -47,17 +53,23 @@ export async function main(ns) {
 		ns.run("stock-bot.js", 1);
 	}
 
+	// Corpo script goes here
+	if (!isCorpo && !skipCorpo) {
+		ns.tprint("Starting Corpo Script...");
+		ns.run("corpo.js", 1);
+	}
+
 	// Spread the jank
 	ns.tprint("Starting Spread Daemon...");
 	ns.run("auto-spread-v2.js", 1);
-
 	await ns.sleep(5000);
 
 	// Start the hacknet script
-	ns.tprint("Starting Hacknet Manager...");
-	ns.run("hacknet-mgr.js", 1);
-
-	await ns.sleep(500);
+	if (!skipHacknetMgr) {
+		ns.tprint("Starting Hacknet Manager...");
+		ns.run("hacknet-mgr.js", 1);
+		await ns.sleep(500);
+	}
 
 	// Buy server script goes here
 	if (!skipBuyServer) {

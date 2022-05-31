@@ -32,7 +32,7 @@ export async function main(ns) {
 		ns.print('Best upgrade for Node 0: ' + bestUpgrade);
 
 		let upgradePPC = 0;
-		let nodePPC = nodeProdPerCost(ns, baseNode.level, baseNode.ram, baseNode.cores);
+		let nodePPC = await nodeProdPerCost(ns, baseNode.level, baseNode.ram, baseNode.cores);
 
 		if (bestUpgrade == 'L')
 			upgradePPC = levelProdPerCost(ns, baseNode.level, baseNode.ram, baseNode.cores);
@@ -73,13 +73,13 @@ export async function main(ns) {
 			ns.print('Successfully bought Node ' + ns.hacknet.numNodes());
 		}
 
-		await ns.sleep(200)
+		await ns.sleep(500);
 	}
 	ns.print('Hacknet fully upgraded.');
 }
 
 /** @param {NS} ns **/
-function levelUpgradeCostTotal(ns, level) {
+async function levelUpgradeCostTotal(ns, level) {
 	let mult = ns.getHacknetMultipliers().levelCost;
 	let result = 0;
 	let i = 1;
@@ -87,13 +87,14 @@ function levelUpgradeCostTotal(ns, level) {
 	while (i < level) {
 		result = result + 520 * mult * Math.pow(1.04, i - 1);
 		++i;
+		await ns.sleep(200);
 	}
 
 	return result;
 }
 
 /** @param {NS} ns **/
-function ramUpgradeCostTotal(ns, ram) {
+async function ramUpgradeCostTotal(ns, ram) {
 	let mult = ns.getHacknetMultipliers().ramCost;
 	let result = 0;
 	let i = 0;
@@ -101,13 +102,14 @@ function ramUpgradeCostTotal(ns, ram) {
 	while (i < Math.log2(ram)) {
 		result = result + 30000 * mult * Math.pow(1.04, i);
 		++i;
+		await ns.sleep(200);
 	}
 
 	return result;
 }
 
 /** @param {NS} ns **/
-function coreUpgradeCostTotal(ns, cores) {
+async function coreUpgradeCostTotal(ns, cores) {
 	let mult = ns.getHacknetMultipliers().coreCost;
 	let result = 0;
 	let i = 1;
@@ -115,21 +117,22 @@ function coreUpgradeCostTotal(ns, cores) {
 	while (i < cores) {
 		result = result + 500000 * mult * 1.04 ^ (i - 1);
 		++i;
+		await ns.sleep(200);
 	}
 
 	return result;
 }
 
 /** @param {NS} ns **/
-function nodeProdPerCost(ns) {
+async function nodeProdPerCost(ns) {
 	if (ns.hacknet.numNodes() == ns.hacknet.maxNumNodes())
 		return 0;
 
 	let node = ns.hacknet.getNodeStats(0);
 	let nodeCost = ns.hacknet.getPurchaseNodeCost();
-	let levelCost = levelUpgradeCostTotal(ns, node.level);
-	let ramCost = ramUpgradeCostTotal(ns, node.ram);
-	let coreCost = coreUpgradeCostTotal(ns, node.cores);
+	let levelCost = await levelUpgradeCostTotal(ns, node.level);
+	let ramCost = await ramUpgradeCostTotal(ns, node.ram);
+	let coreCost = await coreUpgradeCostTotal(ns, node.cores);
 
 	return ns.hacknet.getNodeStats(0).production / (nodeCost + levelCost + ramCost + coreCost);
 }
@@ -231,6 +234,7 @@ async function upgradeToMatch(ns, baseIndex, spendPercentage) {
 			await waitForCash(ns, ns.hacknet.getRamUpgradeCost(i, 1, spendPercentage));
 			ns.hacknet.upgradeRam(i, 1);
 			curNode = ns.hacknet.getNodeStats(i);
+			await ns.sleep(1000*60);
 		}
 
 		while (curNode.level < baseNode.level) {
@@ -238,6 +242,7 @@ async function upgradeToMatch(ns, baseIndex, spendPercentage) {
 			await waitForCash(ns, ns.hacknet.getLevelUpgradeCost(i, 1, spendPercentage));
 			ns.hacknet.upgradeLevel(i, 1);
 			curNode = ns.hacknet.getNodeStats(i);
+			await ns.sleep(1000*60);
 		}
 
 		while (curNode.cores < baseNode.cores) {
@@ -245,8 +250,10 @@ async function upgradeToMatch(ns, baseIndex, spendPercentage) {
 			await waitForCash(ns, ns.hacknet.getCoreUpgradeCost(i, 1, spendPercentage));
 			ns.hacknet.upgradeCore(i, 1);
 			curNode = ns.hacknet.getNodeStats(i);
+			await ns.sleep(1000*60);
 		}
 
 		ns.print('Upgrade of Node ' + i + ' complete.');
+		await ns.sleep(1000*60);
 	}
 }

@@ -6,8 +6,10 @@ export async function main(ns) {
 	const debug 			= false;		// Enables multiple log messages. Leave this alone unless you want lag.
 	const threshModifier 	= 0.75;			// Money threshold that we hack towards (we always grow to 100%)
 	const minHackChance 	= 0;	 		// Min hack chance to target
-	const minServerGrowth	= 25;			// Min server growth to target
-	const minServerMoney 	= 1e6;			// Min money the server has at its maximum to target (10^9 = $1.0b)
+	const minServerGrowth	= 30;			// Min server growth to target
+	const maxServerGrowth	= 100;			// Max server growth to target
+	const minServerMoney 	= 1e6;			// Min money the server has to target (1e9 = 10^9 = $1.0b)
+	const maxServerMoney	= 2e10;			// Max money the server has to target (2e9 = 2 * 10^9 = $2.0b)
 	const loopInterval 		= 500;			// Amount of time the coordinator waits per loop. Can be CPU intensive.
 
 	// Arguement handling
@@ -19,6 +21,10 @@ export async function main(ns) {
 		expTargets = ns.args[0].split(/[,;]+/);
 		hardTargets = ns.args[0].split(/[,;]+/);
 		if (debug) ns.print("Targets: " + hackTargets);
+	} else if (ns.peek(8) != "NULL PORT DATA") {
+		hackTargets = ns.peek(8).split(/[,;]+/);
+		expTargets = ns.peek(8).split(/[,;]+/);
+		hardTargets = ns.peek(8).split(/[,;]+/);
 	} else {
 		ns.tprint ("ERROR: No targets set?")
 	}
@@ -41,6 +47,8 @@ export async function main(ns) {
 	 * 	4 : GLOBAL : JSON 	RAM Info	{Toal RAM Available, Total RAM Used}
 	 * 	5 : GLOBAL : JSON	EXP Farm	[{Target, Hack Threads, Hack RAM Used, Weaken Threads, Weaken RAM Used, Weaken Grow Threads, Grow RAM Used}]
 	 *	6 : GLOBAL : JSON	Flag List 	[{Target, Hack Lock, H Lock Time, Weaken Lock, W Lock Time, Grow Lock, G Lock Time}] 	
+	 	...
+		8 : GLOBAL : ARRAY	Target List [target]
 	 *	...
 	 * 	11 : HOME : RAW STACK String (Host added to botnet)
 	 * 	12 : HOME : RAW STACK String (Host being deleted)
@@ -73,7 +81,10 @@ export async function main(ns) {
 	 */
 	hackTargets.sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a));	
 	hackTargets = hackTargets.filter( function(x) {
-		return ns.hasRootAccess(x) && ns.hackAnalyzeChance(x) >= minHackChance && ns.getServerGrowth(x) >= minServerGrowth && ns.getServerMaxMoney(x) >= minServerMoney && ns.getServerRequiredHackingLevel(x) <= ns.getPlayer().hacking;
+		return ns.hasRootAccess(x) && ns.hackAnalyzeChance(x) >= minHackChance 
+			&& ns.getServerGrowth(x) >= minServerGrowth && ns.getServerGrowth(x) <= maxServerGrowth
+			&& ns.getServerMaxMoney(x) >= minServerMoney && ns.getServerMaxMoney(x) <= maxServerMoney 
+			&& ns.getServerRequiredHackingLevel(x) <= ns.getPlayer().hacking;
 	});	
 	
 	hackTargets.forEach( function(x) {
@@ -175,7 +186,9 @@ export async function main(ns) {
 		for(var i = 0; i < hardTargets.length; i++) {
 			if (ns.hasRootAccess(hardTargets[i]) && ns.getServerRequiredHackingLevel(hardTargets[i]) <= ns.getPlayer().hacking) {
 				ns.print(`[HARD] We can now hack [${hardTargets[i]}]. Processing now!`);
-				if (ns.hasRootAccess(hardTargets[i]) && ns.hackAnalyzeChance(hardTargets[i]) >= minHackChance && ns.getServerGrowth(hardTargets[i]) >= minServerGrowth && ns.getServerMaxMoney(hardTargets[i]) >= minServerMoney) {
+				if (ns.hasRootAccess(hardTargets[i]) && ns.hackAnalyzeChance(hardTargets[i]) >= minHackChance 
+						&& ns.getServerGrowth(hardTargets[i]) >= minServerGrowth && ns.getServerGrowth(hardTargets[i]) <= maxServerGrowth 
+						&& ns.getServerMaxMoney(hardTargets[i]) >= minServerMoney && ns.getServerMaxMoney(hardTargets[i]) <= maxServerMoney) {
 					ns.print(`[HARD] Adding [${hardTargets[i]}] as a money target`);
 					hackTargets.push(hardTargets[i]);
 					jTargetStatus.push(jHardTargetStatus[i]);

@@ -54,9 +54,11 @@ export async function main(ns) {
 		}
 
 		if (ns.getHostname() == "home" && initialSpread) {
+			ns.print("Posting Servers to Port 8...")
+			await ns.tryWritePort(8 , servers.filter(x => !x.includes("pserv")).toString());
+			
 			ns.print("Running coordinator...");
-			ns.exec("coordinator.js", "home", 1, servers.filter(x => !x.includes("pserv"))
-				.toString());
+			ns.exec("coordinator.js", "home", 1);
 
 			ns.print("Running status script...");
 			ns.exec("check-status.js", "home", 1);

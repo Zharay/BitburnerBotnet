@@ -4,7 +4,7 @@ export async function main(ns) {
 	
 	var memLevel = 4;					// 4 = 16GB
 	const maxLevel = 20; 				// True maximum is 20 (1048576GB = 1 Petrabyte) 
-	const spendPercentage = 0.1; 		// Percentage of maximum money to spend on server upgrades.
+	const spendPercentage = 0.2; 		// Percentage of maximum money to spend on server upgrades.
 	const ramUsageThreshold = 0.8;		// Percentage of global ram used in hacks. If it goes beyond this, upgrade for more capacity.
 	const waitInterval = 1000*60*1; 	// Time to wait between cycles (in ms)
 

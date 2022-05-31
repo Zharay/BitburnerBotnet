@@ -238,5 +238,5 @@ A terminal only script that you can use to get all the information you'll need a
 
 `run getServerStatus.js [moneyThreshold:Number] [Hostname] ... [Hostname]`
 
-## liquidate.js (1.6GB) and sendKill.js (1.6GB)
-These two scripts have one function each. liquidate.js will send the flag to Port 19 telling your stock-bot to sell all stocks and shutdown. sendKill.js will send a flag to Port 20 telling all running scripts that listen for it to shutdown gracefully (leaving any lingering tasks to complete naturally). It's a good way to shut things down when you are finishing up a run or when you want to close things before making script edits.
+## liquidate.js (1.6GB), sendKill.js (1.6GB), killServer.js (1.6GB)
+These scripts have one function each. liquidate.js will send the flag to Port 19 telling your stock-bot to sell all stocks and shutdown. sendKill.js will send a flag to Port 20 telling all running scripts that listen for it to shutdown gracefully (leaving any lingering tasks to complete naturally). It's a good way to shut things down when you are finishing up a run or when you want to close things before making script edits. Finally, killServer.js is like sendKill only it requires you pass a host name as an argument. This uses Port 18 and will cause only that server's hack-daemon to shutdown gracefully.
