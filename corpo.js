@@ -1,10 +1,14 @@
 /** Script to run your corporation for you.
+ * 		Rewritten By: Zharay
  * 		Originally By: Kamukrass
- * 		GitHub: https://github.com/kamukrass/Bitburner
+ * 		GitHub: https://github.com/Zharay/BitburnerBotnet
  * 		
- * 		This script has been given a complete overhaul.
+ * 		Automates your corporation smartly following the guide below. 
  * 
  * 		RECOMMENDED THAT YOU START A BUSINESS IN SOMETHING SIMPLE LIKE AGRICULTURE FIRST!
+ *  	
+ * 		Will be using (this guide)[https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing]
+ * 		Please follow the first section before even starting this script.
  * 
  * 		Required:
  * 			- 1TB RAM
@@ -12,13 +16,42 @@
  * 			- Office API ($50b corp funds)
  * 			- Warehouse API ($50b corp funds)
  * 			- DO NOT GET THOSE API UNTIL YOU HAVE PROFITS
- * 
- * 	Will be using (this guide)[https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing]
- * 		Please follow the first section before even starting this script.
  */
 
-const maxEmployees = 420;
-const timeBetweenHires = 5*60*1000; 
+/** Options */
+const debug = false;				// Enables more text information in console log
+const maxEmployees = 420;			// Max employees the main production company will go to (satellite offices are -60 this)
+const timeBetweenHires = 5*60*1000;	// (ms) Time to wait between hiring employees.
+const mainLoopTime = 1000;			// (ms) Time to wait between of corpo script
+const marketRefreshTime = 2500;		// (ms) Time to wait between checking of market price (this changes with upgrades!)
+
+const upgradeList = [				// Price = prio * cost. Max self-explanatory
+	// lower priority value -> upgrade faster
+	{ prio: 1, max: 40, name: "Wilson Analytics" },
+	{ prio: 1, max: 20, name: "FocusWires" },
+	{ prio: 1, max: 20, name: "Neural Accelerators" },
+	{ prio: 1, max: 20, name: "Speech Processor Implants" },
+	{ prio: 1, max: 20, name: "Nuoptimal Nootropic Injector Implants" },
+	{ prio: 4, max: 20, name: "Project Insight", },
+	{ prio: 4, max: 20, name: "DreamSense" },
+	{ prio: 8, max: 20, name: "ABC SalesBots" },
+	{ prio: 8, max: 20, name: "Smart Factories" },
+	{ prio: 8, max: 20, name: "Smart Storage" },
+];
+
+const researchList = [				// Price= prio * cost. Market-TA.I & II Are always researched together before this list.
+	// lower priority value -> upgrade faster
+	{ prio: 2, name: "uPgrade: Fulcrum" },
+	{ prio: 3, name: "uPgrade: Capacity.I" },
+	{ prio: 4, name: "uPgrade: Capacity.II" },
+	{ prio: 5, name: "Drones" },
+	{ prio: 6, name: "Drones - Assembly" },
+	{ prio: 6, name: "Drones - Transport" },
+	{ prio: 10, name: "Overclock" },
+	{ prio: 10, name: "Self-Correcting Assemblers" },
+	{ prio: 10, name: "Automatic Drug Administration" },
+	{ prio: 10, name: "CPH4 Injections" },
+];
 
 /** @param {NS} ns **/
 export async function main(ns) {
@@ -29,7 +62,7 @@ export async function main(ns) {
 		ns.print("WARNING: You will need enough corporation funds for Office and Warehouse APIs! Please manage the company yourself for its starting capitol!");
 		ns.corporation.createCorporation("Corpo Industries");
 		ns.print("Created Corpo Industries ($150b)");
-		ns.sleep(1000*60);
+		ns.sleep(5000);
 	} else if (!ns.getPlayer().hasCorporation)
 	{
 		ns.print("ERROR: Not enough funds to even start a corporation. You are too poor!")
@@ -95,7 +128,7 @@ export async function main(ns) {
 
 	while (!ns.corporation.hasUnlockUpgrade("Warehouse API") && !ns.corporation.hasUnlockUpgrade("Office API")) {
 		ns.print("Waiting for Warehouse and Office APIs to be unlocked...");
-		await ns.sleep(1000*60*5);
+		await ns.sleep(60000);
 	}
 
 	corp = ns.corporation.getCorporation();
@@ -120,20 +153,21 @@ export async function main(ns) {
 
 	// Retain a number of divisions.
 	var numDivisions = corp.divisions.length;
-	var whenLastHandleEmployees = 0;
+	var timecards = new Map();
 
 	while (true) {
 		corp = ns.corporation.getCorporation();
 
 		//  If the player makes a new division, we will handle it.
 		if (numDivisions != corp.divisions.length) {
-			ns.print(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1]}]`);
-			ns.toast(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1]}]`);
+			ns.print(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1].name}]`);
+			ns.toast(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1].name}]`);
 			await initCities(ns, corp.divisions[corp.divisions.length-1]);
 			numDivisions = corp.divisions.length;
 		}
 
 		// Handle corporation level upgrades and unlocks
+		if (debug) ns.print("Considering Upgrades...");
 		handleUpgrades(ns);
 
 		// The main loop for managing your corporation
@@ -144,29 +178,33 @@ export async function main(ns) {
 				continue;
 			}
 
+			// Handle our research.
+			if (debug) ns.print(`[${division.name}] Considering Research...`);
+			handleResearch(ns, division);
+
 			// Handle our products first.
+			if (debug) ns.print(`[${division.name}] Considering Products...`);
 			await handleProducts(ns, division);
 
 			// Handle our advertisements... Only if its cost is lower than upgrading Aevum office by 15!
 			if (ns.corporation.getHireAdVertCost(division.name) < ns.corporation.getOfficeSizeUpgradeCost(division.name, "Aevum", 15)) {
+				if (debug) ns.print(`[${division.name}] Considering Ads...`);
 				handleAds(ns, division);
 			}
 
 			// Handle our employees... But only every 5 minutes.
-			if (((new Date()) - whenLastHandleEmployees) >= timeBetweenHires) {
+			if (!timecards.has(division.name) || (timecards.has(division.name) && ((new Date()) - timecards.get(division.name)) >= timeBetweenHires)) {
+				if (debug) ns.print(`[${division.name}] Considering Employees...`);
 				await handleEmployees(ns, division);
-				whenLastHandleEmployees = new Date();
+				timecards.set(division.name, new Date());
 			}
 
-			// Handle our research.
-			handleResearch(ns, division);
-
 			// Handle our warehouses.
+			if (debug) ns.print(`[${division.name}] Considering Warehouses...`);
 			handleWarehouses(ns, division);
 		}
 
-		// Wait 5 sec
-		await ns.sleep(5000);
+		await ns.sleep(mainLoopTime);
 	}
 }
 
@@ -185,10 +223,10 @@ function handleUpgrades(ns) {
 	
 	// Only get shady accounting or Government Partnership if you have 4x the funds (ie. end game)
 	if (!ns.corporation.hasUnlockUpgrade("Shady Accounting") && ns.corporation.getUnlockUpgradeCost("Shady Accounting") * 4 < ns.corporation.getCorporation().funds) {
-		ns.print(`[CORP] Unlocking Shady Accounting (${ns.corporation.getUnlockUpgradeCost("Shady Accounting")})`)
+		ns.print(`[CORP] Unlocking Shady Accounting (${ns.nFormat(ns.corporation.getUnlockUpgradeCost("Shady Accounting"), "$0.00a")})`)
 		ns.corporation.unlockUpgrade("Shady Accounting");
 	} else if (!ns.corporation.hasUnlockUpgrade("Government Partnership") && ns.corporation.getUnlockUpgradeCost("Government Partnership") * 4 < ns.corporation.getCorporation().funds) {
-		ns.print(`[CORP] Unlocking Government Partnership (${ns.corporation.getUnlockUpgradeCost("Government Partnership")})`)
+		ns.print(`[CORP] Unlocking Government Partnership (${ns.nFormat(ns.corporation.getUnlockUpgradeCost("Government Partnership"), "$0.00a")})`)
 		ns.corporation.unlockUpgrade("Government Partnership");
 	}
 }
@@ -225,9 +263,8 @@ function handleUpgrades(ns) {
 		await determineMaxMarketPrice(ns, division, productName);
 	}
 
-
 	var maxProducts = 3	+ (ns.corporation.hasResearched(division.name, "uPgrade: Capacity.I") ? 1 : 0) 
-						+ (division.products.length < 5 && ns.corporation.hasResearched(division.name, "uPgrade: Capacity.II") ? 1 : 0);
+						+ (ns.corporation.hasResearched(division.name, "uPgrade: Capacity.II") ? 1 : 0);
 
 	if (division.products.length < maxProducts && !isDeveloping) {
 		// If we have slots and are not developing, create a new product!
@@ -236,7 +273,8 @@ function handleUpgrades(ns) {
 		var prodName = generateRandomName(division.products, division.type);
 		ns.corporation.makeProduct(division.name, "Aevum", prodName, 1e9, 1e9);
 	} else if (division.products.length == maxProducts && !isDeveloping) {
-		if (ns.corporation.hasResearched(division.name, "Market-TA.II") && division.research < 140000) {
+		var researchCost = ns.corporation.getResearchCost(division.name, "Market-TA.I") + ns.corporation.getResearchCost(division.name, "Market-TA.II");
+		if (ns.corporation.hasResearched(division.name, "Market-TA.II") && division.research < researchCost) {
 			ns.print(`[${division.name}] Not going to discontinue products while research is too low.`)
 			return;
 		}
@@ -245,6 +283,10 @@ function handleUpgrades(ns) {
 		var lowestPerformer = "";
 		var lowestMP = 0;
 		for (var productName of division.products) {
+			if (!ns.corporation.getProduct(division.name, productName).sCost.includes("*") && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
+				ns.print(`[${division.name}] Oops. ${productName} finished before setting its price. Skipping discontinue sequence.`);
+				return;
+			}
 			var nMP = parseFloat(ns.corporation.getProduct(division.name, productName).sCost.split("*")[1]);
 			if (lowestMP == 0 || nMP < lowestMP) {
 				lowestMP = nMP;
@@ -255,6 +297,10 @@ function handleUpgrades(ns) {
 		if (lowestPerformer != "") {
 			ns.print(`[${division.name}] Discontinuing lowest performing product [${lowestPerformer}]`);
 			ns.corporation.discontinueProduct(division.name, lowestPerformer);
+			await waitForFunds(ns, 1e9);
+			var prodName = generateRandomName(division.products, division.type);
+			ns.print(`[${division.name}] Making a new product!`)
+			ns.corporation.makeProduct(division.name, "Aevum", prodName, 1e9, 1e9);
 		}
 	}
 }
@@ -270,8 +316,22 @@ async function determineMaxMarketPrice(ns, division, productName) {
 	var mpMultiplier = 1;
 	var mpPower = 0;
 	var product = ns.corporation.getProduct(division.name, productName);
+	var indOpt = industries.find(x => x.type == division.type);
+	var clearedExcess = false;
 
-	if (ns.corporation.hasResearched(division.name, "Market-TA.II") && product.sCost == 0) {
+	// If we have any excess product, clear it from the warehouses
+	if (product.cityData["Aevum"][0] > product.cityData["Aevum"][1] * 10) {
+		ns.print(`[${division.name}] Shedding excess ${productName}.`)
+		if (ns.corporation.hasResearched(division.name, "Market-TA.II")) {
+			ns.corporation.setProductMarketTA1(division.name, productName, false);
+			ns.corporation.setProductMarketTA2(division.name, productName, false);
+		}
+		ns.corporation.sellProduct(division.name, "Aevum", productName, "MAX", "1", true);
+		clearedExcess = true;
+		await ns.sleep(marketRefreshTime*3);
+	}
+
+	if (ns.corporation.hasResearched(division.name, "Market-TA.II") && (product.sCost <= 1 || clearedExcess)) {
 		// First check if we have researched Market-TA.II. If we do, just set it and forget it.
 		ns.print(`[${division.name}] Setting ${product.name} to sell with Market-TA.I & II.`);
 		ns.corporation.setProductMarketTA1(division.name, productName, true);
@@ -288,24 +348,17 @@ async function determineMaxMarketPrice(ns, division, productName) {
 	} else if (product.cityData["Aevum"][1].toFixed(2) != product.cityData["Aevum"][2].toFixed(2)) {
 		// Determine if we actually have an issue (cause it blips every tick)
 		var notEqualCount = 0;
-		for (var i = 0; i < 3; i++) {
-			await ns.sleep(5000);
+		for (var i = 0; i < 4; i++) {
+			await ns.sleep(marketRefreshTime);
 			product = ns.corporation.getProduct(division.name, productName);
 			notEqualCount =+ product.cityData["Aevum"][1].toFixed(2) != product.cityData["Aevum"][2].toFixed(2) ? 1 : 0;
 		}
-		if (notEqualCount < 1) return;
+		if (notEqualCount < 2) return;
 
 		ns.print(`[${division.name}] ${product.name} is not selling optimally.`);
 	}
 
 	ns.print(`[${division.name}] Manually determining max Market Price of ${productName}`);
-
-	// If we have any excess product, clear it from the warehouses
-	if (product.cityData["Aevum"][0] > product.cityData["Aevum"][1] * 10) {
-		ns.print(`[${division.name}] Shedding excess ${productName}.`)
-		ns.corporation.sellProduct(division.name, "Aevum", productName, "MAX", "1", true);
-		await ns.sleep(5000);
-	}
 
 	// Determine best multiplier out of all products
 	var bestRating = 0;
@@ -333,15 +386,15 @@ async function determineMaxMarketPrice(ns, division, productName) {
 	mpPower = parseInt(mpMultiplier.toExponential().split("+")[1]) - 1 ;
 	mpPower = mpPower < 0 ? 0 : mpPower;
 
-	// Then determine our multiplier (shift it by 1 decimal)
-	mpMultiplier = parseFloat(mpMultiplier.toExponential().split("e")[0]) * (mpMultiplier.toExponential().includes(".") ? 10 : 1);
+	// Then determine our multiplier (shift it by 1 decimal if its a whole number type, leave it alone if is decimal)
+	mpMultiplier = parseFloat(mpMultiplier.toExponential().split("e")[0]) * (mpMultiplier.toExponential().includes(".") && !indOpt.mpDecimal ? 10 : 1);
 	
 	// Now modify our exponential so we start a little lower
-	var newExp = modExponential(mpMultiplier, mpPower, -5);
+	var newExp = modExponential(mpMultiplier, mpPower, indOpt.mpDecimal, -5);
 	mpMultiplier = newExp.multi;
 	mpPower = newExp.pow;
 
-	var newMP = parseFloat(mpMultiplier + "e" + mpPower);
+	var newMP = parseFloat(mpMultiplier.toFixed(1) + "e" + mpPower);
 	product = ns.corporation.getProduct(division.name, productName);
 	ns.print(`[${division.name}] Starting MP at ${newMP}`);
 
@@ -350,33 +403,33 @@ async function determineMaxMarketPrice(ns, division, productName) {
 
 	// We loop until the number produced is equal to the number sold. (woo do..while loops!) 
 	do {
-		newMP = parseFloat(mpMultiplier + "e" + mpPower);
+		newMP = parseFloat(mpMultiplier.toFixed(1) + "e" + mpPower);
 		ns.print(`[${division.name}] ${product.name} is not selling optimally. Determining max market price (MP * ${newMP})...`);
 		ns.corporation.sellProduct(division.name, "Aevum", productName, "MAX", `MP*${newMP}`, true);
 		
 		// We always go from 1 to 99 before going up a power (ie. 1e0 = 1, 99e0 = 99, 10e1 = 100, 99e1 = 990...)
 		// In my previous runs, once you go beyond 100, the granularity goes out the window.
 
-		ns.print(`[${division.name}] ${productName}: Producing: ${ns.nFormat(product.cityData["Aevum"][1],"0.000")} | Selling: ${ns.nFormat(product.cityData["Aevum"][2],"0.000")}`);
+		//ns.print(`[${division.name}] ${productName}: Producing: ${ns.nFormat(product.cityData["Aevum"][1],"0.000")} | Selling: ${ns.nFormat(product.cityData["Aevum"][2],"0.000")}`);
 			
-		newExp = modExponential(mpMultiplier, mpPower, 1);
+		newExp = modExponential(mpMultiplier, mpPower, indOpt.mpDecimal, indOpt.mpDecimal ? 2 : 1);
 		mpMultiplier = newExp.multi;
 		mpPower = newExp.pow;
 
-		// Wait 10 seconds before checking again.
-		await ns.sleep(5000);
+		// Wait before checking again.
+		await ns.sleep(marketRefreshTime);
 
 		product = ns.corporation.getProduct(division.name, productName);
 	} while (product.cityData["Aevum"][1].toFixed(2) == product.cityData["Aevum"][2].toFixed(2))
 
-	ns.print(`[${division.name}] ${productName}: Producing: ${ns.nFormat(product.cityData["Aevum"][1],"0.000")} | Selling: ${ns.nFormat(product.cityData["Aevum"][2],"0.000")}`);
+	//ns.print(`[${division.name}] ${productName}: Producing: ${ns.nFormat(product.cityData["Aevum"][1],"0.000")} | Selling: ${ns.nFormat(product.cityData["Aevum"][2],"0.000")}`);
 
 	// We must have found our optimal multiplier. Step back two (since it already is +1 over last good one).
-	newExp = modExponential(mpMultiplier, mpPower, -2);
+	newExp = modExponential(mpMultiplier, mpPower, indOpt.mpDecimal, indOpt.mpDecimal ? -4 : -2);
 	mpMultiplier = newExp.multi;
 	mpPower = newExp.pow;
 	
-	newMP = parseFloat(mpMultiplier + "e" + mpPower);
+	newMP = parseFloat(mpMultiplier.toFixed(1) + "e" + mpPower);
 	ns.print(`[${division.name}] ${product.name}'s optimal MP has been found (MP * ${newMP})...`);
 	ns.corporation.sellProduct(division.name, "Aevum", productName, "MAX", `MP*${newMP}`, true);
 }
@@ -475,10 +528,10 @@ function handleResearch(ns, division) {
 	} else if (!ns.corporation.hasResearched(division.name, marketTAII)) {
 		// always research Market-TA.I plus .II first and in one step
 		var researchCost = ns.corporation.getResearchCost(division.name, marketTAI) + ns.corporation.getResearchCost(division.name, marketTAII);
-		if (division.research >= researchCost * 1.1) {
+		if (division.research >= researchCost * 1.1 && division.products.length == 3) {
 			// We will skip this if we are making a new product. Better for profits in the long run!
 			for(var product of division.products) {
-				if (ns.corporation.getProduct(division.name, productName).developmentProgress < 100) {
+				if (ns.corporation.getProduct(division.name, product).developmentProgress < 100) {
 					ns.print(`[${division.name}] Skipping ${marketTAI} + ${marketTAII}. Waiting for development to complete first.`);
 					return;
 				}
@@ -519,7 +572,7 @@ function handleWarehouses(ns, division) {
 	// check if warehouses are near max capacity and upgrade if needed
 	for (const city of cities) {
 		var cityWarehouse = ns.corporation.getWarehouse(division.name, city);
-		if (cityWarehouse.sizeUsed > 0.9 * cityWarehouse.size) {
+		if (cityWarehouse.sizeUsed > 0.8 * cityWarehouse.size) {
 			ns.print(`WARNING: [${division.name}] may have a product not selling correctly! Please check!`)
 			if (ns.corporation.getCorporation().funds >= ns.corporation.getUpgradeWarehouseCost(division.name, city)) {
 				ns.print(`[${division.name}] Upgrading warehouse in ${city} (${ns.nFormat(ns.corporation.getUpgradeWarehouseCost(division.name, city), "$0.00a")})`);
@@ -686,7 +739,7 @@ async function waitForFunds(ns, cost) {
 		ns.print('Not enough money. Waiting for funds to reach: ' + ns.nFormat(ns.getCorporation().funds, "$0.00a") + ' / ' + ns.nFormat(cost, "$0.00a"));
 
 	while ((ns.corporation.getCorporation().funds) < cost)
-		await ns.sleep(1000*60);
+		await ns.sleep(1000);
 }
 
 /**
@@ -718,22 +771,34 @@ async function waitForFunds(ns, cost) {
  * Modifies an exponential, maintaining a value between 1e0 and 
  * @param {Number} multiplier 
  * @param {Number} power 
- * @param {Number} multiplierMod 
+ * @param {Number} isDecimal
+ * @param {Number} multiplierMod Whole integers only!
  * @returns {Number, Number} multi, pow
  */
- function modExponential (multiplier, power, multiplierMod) {
-	multiplier += multiplierMod;
-
-	if (multiplier < 10 && power > 0) {
-		multiplier = 99;
-		power--;
-	} else if (multiplier > 99) {
-		power++;
-		multiplier = 10;
-	} else if (multiplier > 0 && multiplier < 10 && power == 1) {
-		power=0;
-	} else if (multiplier <= 0) {
-		multiplier = 1;
+ function modExponential (multiplier, power, isDecimal, multiplierMod) {
+	multiplier += isDecimal ? multiplierMod / 10 : multiplierMod;
+	if (!isDecimal) {
+		if (multiplier < 10 && power > 0) {
+			multiplier = 99;
+			power--;
+		} else if (multiplier > 99) {
+			power++;
+			multiplier = 10;
+		} else if (multiplier > 0 && multiplier < 10 && power == 1) {
+			power=0;
+		} else if (multiplier <= 0) {
+			multiplier = 1;
+		}
+	} else {
+		if (multiplier < 1.0 && power > 0) {
+			multiplier = 9.9;
+			power--;
+		} else if (multiplier > 9.9) {
+			power++;
+			multiplier = 1.0;
+		} else if (multiplier <= 0) {
+			multiplier = 1.0;
+		}
 	}
 
 	return {
@@ -744,32 +809,16 @@ async function waitForFunds(ns, cost) {
 
 const cities = ["Sector-12", "Aevum", "Volhaven", "Chongqing", "New Tokyo", "Ishima"];
 
-const upgradeList = [
-	// lower priority value -> upgrade faster
-	{ prio: 1, max: 40, name: "Wilson Analytics" },
-	{ prio: 1, max: 20, name: "FocusWires" },
-	{ prio: 1, max: 20, name: "Neural Accelerators" },
-	{ prio: 1, max: 20, name: "Speech Processor Implants" },
-	{ prio: 1, max: 20, name: "Nuoptimal Nootropic Injector Implants" },
-	{ prio: 4, max: 20, name: "Project Insight", },
-	{ prio: 4, max: 20, name: "DreamSense" },
-	{ prio: 8, max: 20, name: "ABC SalesBots" },
-	{ prio: 8, max: 20, name: "Smart Factories" },
-	{ prio: 8, max: 20, name: "Smart Storage" },
-];
-
-const researchList = [
-	// lower priority value -> upgrade faster
-	{ prio: 3, name: "uPgrade: Capacity.I" },
-	{ prio: 4, name: "uPgrade: Capacity.II" },
-	{ prio: 5, name: "Drones - Assembly" },
-	{ prio: 10, name: "Overclock" },
-	{ prio: 10, name: "uPgrade: Fulcrum" },
-	{ prio: 10, name: "Self-Correcting Assemblers" },
-	{ prio: 10, name: "Drones - Transport" },
-	{ prio: 10, name: "CPH4 Injections" },
-	{ prio: 21, name: "Drones" },
-	{ prio: 26, name: "Automatic Drug Administration" },
+// List of each industry that can make products and their specific options
+const industries = [
+	{type: "Tobacco", mpDecimal: false, prodMats: ""},
+	{type: "Healthcare", mpDecimal: true, prodMats: ""},
+	{type: "Food", mpDecimal: false, prodMats: ""},
+	{type: "Pharmaceutical", mpDecimal: true, prodMats: "Drugs"},
+	{type: "Computer", mpDecimal: true, prodMats: "Hardware"},
+	{type: "Robotics", mpDecimal: true, prodMats: "Robots"},
+	{type: "Software", mpDecimal: false, prodMats: "AICores"},
+	{type: "RealEstate", mpDecimal: true, prodMats: "RealEstate"},
 ];
 
 // Literally candy names lol
