@@ -24,6 +24,8 @@ const maxEmployees = 420;			// Max employees the main production company will go
 const timeBetweenHires = 5*60*1000;	// (ms) Time to wait between hiring employees.
 const mainLoopTime = 1000;			// (ms) Time to wait between of corpo script
 const marketRefreshTime = 2500;		// (ms) Time to wait between checking of market price (this changes with upgrades!)
+const warehouseFillUp = 0.60;		// Percentage of warehouse usage to check against. If its greater, upgrade size
+const shedProdAtFill = 0.80;		// Percentage of product filling the warehouse that is allowed before we shed all stock.
 
 const upgradeList = [				// Price = prio * cost. Max self-explanatory
 	// lower priority value -> upgrade faster
@@ -320,7 +322,7 @@ async function determineMaxMarketPrice(ns, division, productName) {
 	var clearedExcess = false;
 
 	// If we have any excess product, clear it from the warehouses
-	if (product.cityData["Aevum"][0] > product.cityData["Aevum"][1] * 10) {
+	if (product.cityData["Aevum"][0] > shedProdAtFill * ns.corporation.getWarehouse(division.name, "Aevum").size) {
 		ns.print(`[${division.name}] Shedding excess ${productName}.`)
 		if (ns.corporation.hasResearched(division.name, "Market-TA.II")) {
 			ns.corporation.setProductMarketTA1(division.name, productName, false);
@@ -536,6 +538,7 @@ function handleResearch(ns, division) {
 					return;
 				}
 			}
+
 			ns.print(`[${division.name}] is researching ${marketTAI}`);
 			ns.corporation.research(division.name, marketTAI);
 			
@@ -572,7 +575,7 @@ function handleWarehouses(ns, division) {
 	// check if warehouses are near max capacity and upgrade if needed
 	for (const city of cities) {
 		var cityWarehouse = ns.corporation.getWarehouse(division.name, city);
-		if (cityWarehouse.sizeUsed > 0.8 * cityWarehouse.size) {
+		if (cityWarehouse.sizeUsed > warehouseFillUp * cityWarehouse.size) {
 			ns.print(`WARNING: [${division.name}] may have a product not selling correctly! Please check!`)
 			if (ns.corporation.getCorporation().funds >= ns.corporation.getUpgradeWarehouseCost(division.name, city)) {
 				ns.print(`[${division.name}] Upgrading warehouse in ${city} (${ns.nFormat(ns.corporation.getUpgradeWarehouseCost(division.name, city), "$0.00a")})`);
@@ -585,8 +588,6 @@ function handleWarehouses(ns, division) {
 	if (isWarehouseFull) {
 		ns.toast(`WARNING: [${division.name}] may have a product not selling correctly! Please check!`, "warning");
 	}
-
-	// Original then did division advertising.... Nah.
 }
 
 /**
@@ -620,8 +621,6 @@ async function initCities(ns, division, productCity = "Aevum") {
 		// Expand and Hire Employees (15 total) Do it again for production city (for a total of 30)
 		await expandEmployees(ns, division, city, 12);
 		if (city == productCity) await expandEmployees(ns, division, city);
-
-		// The rest is unneeded. Old script upgraded the warehouses (why?) and created the first product (not what this function should be for)
 	}
 }
 
