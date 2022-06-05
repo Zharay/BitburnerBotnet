@@ -12,7 +12,18 @@ export async function main(ns) {
 	const maxServerMoney	= 2e10;			// Max money the server has to target (2e9 = 2 * 10^9 = $2.0b)
 	const loopInterval 		= 500;			// Amount of time the coordinator waits per loop. Can be CPU intensive.
 
-	// Arguement handling
+	if (ns.peek(8) == "NULL PORT DATA" && ns.args.length == 0) {
+		ns.print("Is this loading from a save?");
+		ns.print("Running auto-spread-v2...");
+		ns.run("auto-spread-v2.js", 1);
+
+		ns.print("Waiting for targets to be sent...");
+		while (ns.peek(8) == "NULL PORT DATA") {
+			await ns.sleep(200);
+		}
+	}
+
+	// Argument handling
 	var hackTargets = [];
 	var expTargets = [];
 	var hardTargets = [];
@@ -27,6 +38,7 @@ export async function main(ns) {
 		hardTargets = ns.peek(8).split(/[,;]+/);
 	} else {
 		ns.tprint ("ERROR: No targets set?")
+		ns.run("auto-spread")
 	}
 
 	hackTargets.forEach( function(x) {
@@ -36,7 +48,7 @@ export async function main(ns) {
 		}
 	} );
 
-	// Run parterner system
+	// Run partner system
 	ns.print("Running status script...");
 	ns.run("check-status.js", 1);
 
@@ -44,7 +56,7 @@ export async function main(ns) {
 	 * 	1 : GLOBAL : JSON	Target Info	[{Target, Money Threshold, Max Money, Min Security}]
 	 * 	2 : GLOBAL : JSON 	Hosts Info	[{Host, RAM}]
 	 * 	3 : GLOBAL : JSON 	Target Stat	[{Target, Security Risk, Hack Threads, Hack RAM Used, Weaken Threads, Weaken RAM Used, Weaken Grow Threads, Grow RAM Used}]
-	 * 	4 : GLOBAL : JSON 	RAM Info	{Toal RAM Available, Total RAM Used}
+	 * 	4 : GLOBAL : JSON 	RAM Info	{Total RAM Available, Total RAM Used}
 	 * 	5 : GLOBAL : JSON	EXP Farm	[{Target, Hack Threads, Hack RAM Used, Weaken Threads, Weaken RAM Used, Weaken Grow Threads, Grow RAM Used}]
 	 *	6 : GLOBAL : JSON	Flag List 	[{Target, Hack Lock, H Lock Time, Weaken Lock, W Lock Time, Grow Lock, G Lock Time}] 	
 	 	...
@@ -57,8 +69,8 @@ export async function main(ns) {
 	 * 	15 : HOME : RAW STACK JSON {Target for lock, Host, Task, Done?} 
 	 * 	...
 	 *  18 : FLAG : RAW STACK String (Specific hostname to kill softly)
-	 * 	19 : FLAG : RAW String (Sell all command [anytext])
-	 * 	20 : FLAG : RAW String (Kill all command [anytext])	
+	 * 	19 : FLAG : RAW String (Sell all command [any text])
+	 * 	20 : FLAG : RAW String (Kill all command [any text])	
 	 */
 
 	// JSON objects
@@ -74,7 +86,7 @@ export async function main(ns) {
 	var jHardExpStatus = [];
 	
 	/** 0. Setup target servers and status
-	 * 		Critera :	Must be rooted
+	 * 		Criteria :	Must be rooted
 	 * 					Must have a hack chance >= 0% (you can still hack at 0%, it just requires weakening first)
 	 * 					Server growth >= 20 ()
 	 * 					Max money >= $10.00 B
@@ -147,15 +159,15 @@ export async function main(ns) {
 	var gTargets = ns.getPortHandle(1);		// List of all hacking targets to gain money from
 	var gHosts = ns.getPortHandle(2);		// List of all hosts running a hack-daemon or easy-hack (aka n00dles)
 	var gStatus = ns.getPortHandle(3);		// List of all targets' current status. Used primarily by hack-daemon to figure out how many threads to use for a task
-	var gRam = ns.getPortHandle(4);			// A readout of the total global ram useage and total. THIS IS SLOW as it only updates every 1~ second. Used only by check-status
+	var gRam = ns.getPortHandle(4);			// A readout of the total global ram usage and total. THIS IS SLOW as it only updates every 1~ second. Used only by check-status
 	var gExp = ns.getPortHandle(5);			// List of all EXP targets. They must have money to be of any use for this.
-	var gLock = ns.getPortHandle(6);		// Global ram useage/maximum. THIS IS VERY SLOW as this only gets updated every second. As such it's only used by check-status.
+	var gLock = ns.getPortHandle(6);		// Global ram usage/maximum. THIS IS VERY SLOW as this only gets updated every second. As such it's only used by check-status.
 	var inHosts = ns.getPortHandle(11);		// List of hosts running a hack-daemon to be added 
 	var inDeleted = ns.getPortHandle(12);	// List of hosts running a hack-daemon to be deleted (typically private servers)
 	var inTasks = ns.getPortHandle(13);		// Check task queue - Brought in from hack.js, weaken.js, and grow.js 
 	var inExp = ns.getPortHandle(14);		// EXP queue. Filtered in from auto-spread and added to over time when we are high enough level to do so
 	var inLock = ns.getPortHandle(15);		// Lock queue. Used by hack-daemons to lock down a single server for a particular task. Eliminates race conditions.
-	var fKill = ns.getPortHandle(20);		// The Kill command. If this is recieved, this script will gracefully stop.
+	var fKill = ns.getPortHandle(20);		// The Kill command. If this is received, this script will gracefully stop.
 
 	gTargets.clear();
 	gHosts.clear();
@@ -376,7 +388,7 @@ export async function main(ns) {
 							} else if ((oldLock.hackLock == "" || oldLock.hackTime >= 10) && !newLock.done) {
 								oldLock.hackLock = newLock.host;
 								oldLock.hackTime = 0;
-								if(debug) ns.print(`[LOCK] Assinging lock to [${newLock.host}] for [${newLock.task} : ${newLock.target}]`);
+								if(debug) ns.print(`[LOCK] Assigning lock to [${newLock.host}] for [${newLock.task} : ${newLock.target}]`);
 							} else {
 							//	ns.print(`[LOCK] Ignoring request. Locked already by [${oldLock.hackLock}]`);
 							}
@@ -390,7 +402,7 @@ export async function main(ns) {
 							} else if ((oldLock.weakenLock == "" || oldLock.weakenTime >= 10) && !newLock.done) {
 								oldLock.weakenLock = newLock.host;
 								oldLock.weakenTime = 0;
-								if(debug) ns.print(`[LOCK] Assinging lock to [${newLock.host}] for [${newLock.task} : ${newLock.target}]`);
+								if(debug) ns.print(`[LOCK] Assigning lock to [${newLock.host}] for [${newLock.task} : ${newLock.target}]`);
 							} else {
 							//	ns.print(`[LOCK] Ignoring request. Locked already by [${oldLock.weakenLock}]`);
 							}
@@ -404,7 +416,7 @@ export async function main(ns) {
 							} else if ((oldLock.growLock == "" || oldLock.growTime >= 10) && !newLock.done) {
 								oldLock.growLock = newLock.host;
 								oldLock.growTime = 0;
-								if(debug) ns.print(`[LOCK] Assinging lock to [${newLock.host}] for [${newLock.task} : ${newLock.target}]`);
+								if(debug) ns.print(`[LOCK] Assigning lock to [${newLock.host}] for [${newLock.task} : ${newLock.target}]`);
 							} else {
 							//	ns.print(`[LOCK] Ignoring request. Locked already by [${oldLock.growLock}]`);
 							}
@@ -465,7 +477,7 @@ export async function main(ns) {
 		gLock.clear();
 		gLock.tryWrite(JSON.stringify(jTargetFlags));
 
-		// 11. Update gRAM -- Global ram useage/maximum. THIS IS VERY SLOW as this only gets updated every second. As such it's only used by check-status.
+		// 11. Update gRAM -- Global ram usage/maximum. THIS IS VERY SLOW as this only gets updated every second. As such it's only used by check-status.
 		var tTotalRam = 0, tUsedRam = 0;
 		jHostServers.forEach( function(x) {
 			if (ns.serverExists(x.host)) {

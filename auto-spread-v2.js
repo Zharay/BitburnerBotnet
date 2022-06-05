@@ -8,6 +8,9 @@
 export async function main(ns) {
 	ns.disableLog("ALL");
 
+	// Options
+	const useArgsToCoord = false; 	// Use a traditional argument pass to the coordinator instead of a port (old method)
+
 	var initialSpread = true;
 	var serverHistory = [];
 	var unrootedServers = [];
@@ -58,7 +61,10 @@ export async function main(ns) {
 			await ns.tryWritePort(8 , servers.filter(x => !x.includes("pserv")).toString());
 			
 			ns.print("Running coordinator...");
-			ns.exec("coordinator.js", "home", 1);
+			if (useArgsToCoord) 
+				ns.exec("coordinator.js", "home", 1, servers.filter(x => !x.includes("pserv")).toString());
+			else 
+				ns.exec("coordinator.js", "home", 1);
 
 			ns.print("Running status script...");
 			ns.exec("check-status.js", "home", 1);
@@ -84,7 +90,7 @@ export async function main(ns) {
 			}
 
 			if (ns.fileExists("BruteSSH.exe", "home")) {
-				ns.print("Bruteforcing SSH...");
+				ns.print("Brute forcing SSH...");
 				ns.brutessh(s);
 			}
 
