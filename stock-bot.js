@@ -90,7 +90,7 @@ export async function main(ns) {
 		ns.clearLog();
 		corpus = refresh(ns, stocks, myStocks);
 		
-		//Sell underperforming shares
+		//Sell under performing shares
 		for (let i = 0; i < myStocks.length; i++) {
 			if (pChange(ns, myStocks[i].sym, myStocks[i].initExpRet, myStocks[i].expRet) <= expRetLossToSell || myStocks[i].expRet <= 0) {		
 				lastSell.stock = myStocks[i].sym;

@@ -3,7 +3,7 @@ export async function main(ns) {
 	ns.disableLog("ALL");
 	
 	var memLevel = 4;					// 4 = 16GB
-	const maxLevel = 20; 				// True maximum is 20 (1048576GB = 1 Petrabyte) 
+	const maxLevel = 20; 				// True maximum is 20 (1048576GB = 1 Petabyte) 
 	const spendPercentage = 0.2; 		// Percentage of maximum money to spend on server upgrades.
 	const ramUsageThreshold = 0.8;		// Percentage of global ram used in hacks. If it goes beyond this, upgrade for more capacity.
 	const waitInterval = 1000*60*1; 	// Time to wait between cycles (in ms)
@@ -88,8 +88,8 @@ export async function main(ns) {
 
 						ns.print(`Going to remove ${pservers[i]} (${pservers[i].split("-")[1]} GB)`);
 						
-						var hackdaemonProccess = processes.filter (x => x.filename == "hack-daemon.js");
-						if (hackdaemonProccess.length > 0) {
+						var hackdaemonProcess = processes.filter (x => x.filename == "hack-daemon.js");
+						if (hackdaemonProcess.length > 0) {
 							ns.print(`Requesting [${pservers[i]}] to kill it's hack-daemon...`);
 							await fHostKill.tryWrite(pservers[i]);
 

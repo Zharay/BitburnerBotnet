@@ -15,10 +15,17 @@ export async function main(ns) {
 	await ns.sleep(randWait);
 
 	var jTargets = JSON.parse(gTargets.peek());
-	
-	var	target = jTargets[0].target;
+	var jExp = JSON.parse(ns.peek(5));
+	var target = "";
 
-	var moneyTreshold = ns.getServerMaxMoney(target) * threshModifier;
+	if (jTargets.length != 0) target = jTargets[0].target;
+	else if (jExp.length != 0) target = jExp[0].target;
+	else {
+		ns.print("Nothing I can do :(");
+		return;
+	}
+
+	var moneyThreshold = ns.getServerMaxMoney(target) * threshModifier;
 	var securityThreshold = ns.getServerMinSecurityLevel(target) + 5;
 
 	var fKill = ns.getPortHandle(20);
@@ -27,7 +34,7 @@ export async function main(ns) {
 		if (ns.getServerSecurityLevel(target) > securityThreshold) {
 			ns.print("Weakening defenses...");
 			await ns.weaken(target);
-		} else if (ns.getServerMoneyAvailable(target) < moneyTreshold) {
+		} else if (ns.getServerMoneyAvailable(target) < moneyThreshold) {
 			ns.print("Growing money...");
 			await ns.grow(target);
 		} else {

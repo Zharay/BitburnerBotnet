@@ -3,10 +3,10 @@ export async function main(ns) {
 	ns.disableLog("ALL");
 
 	// Options
-	const skipStockBot = true;
+	const skipStockBot = false;
 	const skipHacknetMgr = false;
 	const skipBuyServer = false;
-	const skipCorpo = true;
+	const skipCorpo = false;
 
 	// First kill all process on home machine except this script and stock-bot
 	ns.tprint("Killing home processes.")

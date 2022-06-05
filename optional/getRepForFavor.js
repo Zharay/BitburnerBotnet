@@ -29,11 +29,15 @@ function repNeededForFavor(targetFavor) {
 }
 
 export async function main(ns) {
+    if (ns.args.length != 2) {
+        ns.tprint("Usage: getRepForFavor.js [target favor] [current rep]");
+        return;
+    }
     let targetFavor = ns.args[0];
     let currentRep = ns.args[1];
     
     let repNeeded = repNeededForFavor(targetFavor);
+
     
-    ns.tprint('you need ' + repNeeded.toLocaleString() + ' total reputation with a faction or company'
-        + ' to get to ' + targetFavor + ' favor.');
+    ns.tprint(`You need ${repNeeded.toLocaleString()} total reputation to get ${targetFavor} favor.`);
 }

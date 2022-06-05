@@ -8,7 +8,7 @@ A TL;DR  for those who don't want the full details.
 
 **Requirements**
 - A home computer (in game) with at least 32GB of RAM (64GB for all scripts). 
-- Increase Netscript Port size from 50 to 100 in settings.
+- Increase NetScript Port size from 50 to 100 in settings.
 - You DO NOT need Formulas.exe~!
 
 **Basic steps**
@@ -49,7 +49,7 @@ Lets assume you are starting fresh (either in a brand new game or a new BitNode)
 	- Doing so will add way more to the botnet!
 10. Upgrade your home computer's RAM to 64GB and set `skipBuyServer = false` in restart-scripts.js and rerun it.
 	- Alternatively, just run buy-server.js in your terminal
-11. Buy the rest of the port programs from the darkweb (HTTPWorm.exe = $30m and SQLInjec.exe = $250m)
+11. Buy the rest of the port programs from the darkweb (HTTPWorm.exe = $30m and SQLInject.exe = $250m)
 12. You are practically done. The game is now your plaything.
 
 These are the exact steps I took starting BitNode1.2. 9 hours later and the image below is where I am sitting at with my Hack skill at 416 while making $1.38m/sec (and growing)!
@@ -77,7 +77,7 @@ In practice this is a lot more complicated than it seems. I spent days getting t
 Each script serves a specific purpose, the core of which are essential for everything to work.
 
 ## coordinator.js (4.95 GB)
-The heart of the botnet and the handler of nearly all the ports used. Uses heavy use of JSON objects to keep a log of everything going on. This can be ran solo without restart-scripts but you must pass it a list of all servers deliminated by a comma [,] or semicolon [;]. Due to how much information this script must handle, time is always an issue. In fact, it can be considered the a bottleneck. By default it is set to a very generous 1000ms, but it can run smoothly even at 500ms. Keep your (real) processor's capabilities into account when lowering this option!
+The heart of the botnet and the handler of nearly all the ports used. Uses heavy use of JSON objects to keep a log of everything going on. This can be ran solo without restart-scripts but you must pass it a list of all servers delimitated by a comma [,] or semicolon [;]. Due to how much information this script must handle, time is always an issue. In fact, it can be considered the a bottleneck. By default it is set to a very generous 1000ms, but it can run smoothly even at 500ms. Keep your (real) processor's capabilities into account when lowering this option!
 
 For information on all the ports, visit the [wiki](https://github.com/Zharay/BitburnerBotnet/wiki)!
 
@@ -183,7 +183,7 @@ A note on tasks already running on servers that are deleted. Before finishing th
 **Options**
 ```
 var memLevel = 4;		// 4 = 16GB (Recommended minimum to run hack-daemon)
-const maxLevel = 20; 		// True maximum is 20 (1048576GB = 1 Petrabyte) 
+const maxLevel = 20; 		// True maximum is 20 (1048576GB = 1 Petabyte) 
 const spendPercentage = 0.02; 	// Percentage of maximum money to spend on server upgrades.
 const ramUsageThreshold = 0.8;	// Percentage of global ram used in hacks. If it goes beyond this, upgrade for more capacity.
 const waitInterval = 1000*60*5; // Time to wait between cycles (in ms)
