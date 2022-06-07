@@ -50,12 +50,15 @@ export async function main(ns) {
     ns.disableLog("ALL");
     let symLastPrice = {};
     let symChanges = {};
+    var fSell = ns.getPortHandle(19);
+
+
     for (const sym of ns.stock.getSymbols()) {
       symLastPrice[sym] = ns.stock.getPrice(sym);
       symChanges[sym] = []
     }
 
-    while (true) {
+    while (fSell.peek() == "NULL PORT DATA") {
         await ns.sleep(2000);
 
         if (symLastPrice['FSIG'] === ns.stock.getPrice('FSIG')) {
@@ -125,5 +128,23 @@ export async function main(ns) {
             }
           }
         }
+    }
+
+    if (fSell.peek() == "sell") {
+      const prioritizedSymbols = [...ns.stock.getSymbols()];
+      var sellTotal = 0;
+      for (const sym of prioritizedSymbols) {
+        const positions = ns.stock.getPosition(sym);
+        const longShares = positions[0];
+        const shortShares = positions[2];
+
+        if (longShares > 0) {
+          sellTotal -= ns.stock.sell(sym, longShares);
+        } else if (shortShares > 0) {
+          sellTotal = ns.stock.sellShort(sym, shortShares);
+        }
+
+        ns.print(`Liquidated Assets for ${ns.nFormat(sellTotal, "$0.00a")}`);
+      }
     }
 }
