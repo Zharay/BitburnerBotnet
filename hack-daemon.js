@@ -28,6 +28,7 @@ export async function main(ns) {
 	var gExp = ns.getPortHandle(5);
 	var gLock = ns.getPortHandle(6);
 	var outLock = ns.getPortHandle(15);
+	var fShare = ns.getPortHandle(17);
 	var fHostKill = ns.getPortHandle(18);
 	var fKill = ns.getPortHandle(20);
 
@@ -56,6 +57,24 @@ export async function main(ns) {
 		jTargets = JSON.parse(gTargets.peek());
 
 		ns.print("-----------------Starting Loop-------------------");
+
+		// If share is enabled, stop everything and just share.
+		if (fShare.peek() != "NULL PORT DATA" && (host == "home" || host.includes("pserv"))) {
+			if (ns.getScriptRam("shareCPU.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) {
+				var numThreads = Math.floor((ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam("shareCPU.js"));
+
+				if (numThreads > 0) {
+					ns.print(`[${target}] Sharing CPU to contracts... (Threads: ${numThreads})`);
+					ns.run("shareCPU.js", numThreads, new Date().getMinutes());
+				}
+			}
+
+			// Wait and restart loop
+			randWait = 1000 * Math.floor(randomIntFromInterval(3, 5));
+			ns.print("Waiting for [" + (randWait / 1000) + "] seconds");
+			await ns.sleep(randWait);
+			continue;
+		}
 
 		// Cycle the targets from coordinator
 		for (var indexTarget in jTargets) {

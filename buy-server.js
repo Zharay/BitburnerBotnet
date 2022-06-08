@@ -53,7 +53,7 @@ export async function main(ns) {
 			ns.print("Not at maximum server count. Attempting to buy some...");
 
 			while ((ns.getServerMoneyAvailable("home") * spendPercentage) > ns.getPurchasedServerCost(Math.pow(2, memLevel))) {
-				ns.print("Purchasing a [" + Math.pow(2, memLevel) + "GB] server...");
+				ns.print(`Purchasing a [${Math.pow(2, memLevel)} GB] server... (${ns.nFormat(ns.getPurchasedServerCost(Math.pow(2, memLevel), "$0.00a"))})`);
 				
 				var hostname = ns.purchaseServer("pserv-" + Math.pow(2, memLevel), Math.pow(2, memLevel));	
 				if (!ns.serverExists(hostname)) {
@@ -61,7 +61,7 @@ export async function main(ns) {
 					break;
 				}
 				
-				var files = ["hack-daemon.js", "easy-hack.js", "weaken.js", "grow.js", "hack.js", "raze.js"];
+				var files = ["hack-daemon.js", "easy-hack.js", "weaken.js", "grow.js", "hack.js", "raze.js", "shareCPU.js"];
 				ns.print("Copying files to server...");
 				await ns.scp(files, hostname); 
 				

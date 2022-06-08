@@ -3,10 +3,12 @@ export async function main(ns) {
 	ns.disableLog("ALL");
 
 	// Options
-	const skipStockBot = false;
-	const skipHacknetMgr = false;
-	const skipBuyServer = false;
-	const skipCorpo = false;
+	const runStockBot = false;
+	const runStockBotV2 = false;
+	const runHacknetMgr = false;
+	const runBuyServer = false;
+	const runCorpo = false;
+	const enableShare = false;
 
 	// First kill all process on home machine except this script and stock-bot
 	ns.tprint("Killing home processes.")
@@ -17,7 +19,7 @@ export async function main(ns) {
 		if (x.filename != "restart-scripts.js" && x.filename != "stock-bot.js" 
 				&& x.filename != "stock-bot-v2.js" && x.filename != "corpo.js")
 			ns.kill(x.pid);
-		else if (x.filename == "stock-bot.js" || x.filename != "stock-bot-v2.js")
+		else if (x.filename == "stock-bot.js" || x.filename == "stock-bot-v2.js")
 			isStockBot = true;
 		else if (x.filename == "corpo.js")
 			isCorpo = true;
@@ -47,14 +49,26 @@ export async function main(ns) {
 		while (await ns.readPort(i) != "NULL PORT DATA") await ns.sleep(500);
 	}
 
+	// Tell private servers to share CPU cycles
+	if (enableShare) {
+		ns.tprint("Telling private servers to start sharing...");
+        await ns.tryWritePort(17, "share");
+	}
+
 	// Stock bot goes here
-	if (!isStockBot && !skipStockBot) {
+	if (!isStockBot && runStockBot) {
 		ns.tprint("Starting Stock Bot...");
 		ns.run("stock-bot.js", 1);
 	}
 
+	// Stock bot goes here
+	if (!isStockBot && runStockBotV2) {
+		ns.tprint("Starting Stock Bot V2...");
+		ns.run("stock-bot-v2.js", 1);
+	}
+
 	// Corpo script goes here
-	if (!isCorpo && !skipCorpo) {
+	if (!isCorpo && runCorpo) {
 		ns.tprint("Starting Corpo Script...");
 		ns.run("corpo.js", 1);
 	}
@@ -65,14 +79,14 @@ export async function main(ns) {
 	await ns.sleep(5000);
 
 	// Start the hacknet script
-	if (!skipHacknetMgr) {
+	if (runHacknetMgr) {
 		ns.tprint("Starting Hacknet Manager...");
 		ns.run("hacknet-mgr.js", 1);
 		await ns.sleep(500);
 	}
 
 	// Buy server script goes here
-	if (!skipBuyServer) {
+	if (runBuyServer) {
 		ns.tprint("Starting Buy Server Script...");
 		ns.run("buy-server.js", 1);
 	}

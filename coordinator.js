@@ -68,6 +68,7 @@ export async function main(ns) {
 	 * 	14 : HOME : RAW STACk JSON {EXP being worked on, Task, Done?, Threads, RAM}
 	 * 	15 : HOME : RAW STACK JSON {Target for lock, Host, Task, Done?} 
 	 * 	...
+	 *  17 : FLAG : RAW String (Toggle Share)
 	 *  18 : FLAG : RAW STACK String (Specific hostname to kill softly)
 	 * 	19 : FLAG : RAW String (Sell all command [any text])
 	 * 	20 : FLAG : RAW String (Kill all command [any text])	

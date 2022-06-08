@@ -125,7 +125,7 @@ export async function main(ns) {
 		// NOW YOU ARE READY TO USE THIS SCRIPT.
 		// Just give it some time first to generate some funds!
 
-		ns.toast("Corpo.js requires that you manage the company yourself for its starting capitol! Please follow the guide found in corpo.js!", "warning");
+		ns.alert("Corpo.js requires that you manage the company yourself for its starting capitol! Please follow the guide found in corpo.js!");
 	}
 
 	while (!ns.corporation.hasUnlockUpgrade("Warehouse API") && !ns.corporation.hasUnlockUpgrade("Office API")) {
@@ -151,7 +151,7 @@ export async function main(ns) {
 		ns.print("Tobacco industry setup complete. Lets get to business...");
 	}
 
-	ns.toast("Corporation is now being automated!");
+	ns.toast("Corporation is now being automated!", "success", 5000);
 
 	// Retain a number of divisions.
 	var numDivisions = corp.divisions.length;
@@ -163,7 +163,7 @@ export async function main(ns) {
 		//  If the player makes a new division, we will handle it.
 		if (numDivisions != corp.divisions.length) {
 			ns.print(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1].name}]`);
-			ns.toast(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1].name}]`);
+			ns.toast(`Detected a new division! Will initialize [${corp.divisions[corp.divisions.length-1].name}]`, "info", 5000);
 			await initCities(ns, corp.divisions[corp.divisions.length-1]);
 			numDivisions = corp.divisions.length;
 		}
@@ -586,7 +586,7 @@ function handleWarehouses(ns, division) {
 
 	// Doubly make sure the user knows this is happening as it shouldn't be!
 	if (isWarehouseFull) {
-		ns.toast(`WARNING: [${division.name}] may have a product not selling correctly! Please check!`, "warning");
+		ns.toast(`WARNING: [${division.name}] may have a product not selling correctly! Please check!`, "warning", 5000);
 	}
 }
 
@@ -695,7 +695,7 @@ async function initCities(ns, division, productCity = "Aevum") {
 	}
 
 	ns.print(`Investment offer for 10% shares: ${ns.nFormat(ns.corporation.getInvestmentOffer().funds, "$0.00a")}`);
-	ns.toast(`Investment offer for 10% shares: ${ns.nFormat(ns.corporation.getInvestmentOffer().funds, "$0.00a")}`);
+	ns.toast(`Investment offer for 10% shares: ${ns.nFormat(ns.corporation.getInvestmentOffer().funds, "$0.00a")}`, "info", 5000);
 
 	// Rest has been take out. This should be done manually.
 /*	ns.print("Funds before public: " + ns.nFormat(ns.corporation.getCorporation().funds, "$0.00a"));
