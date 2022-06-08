@@ -27,9 +27,10 @@ Lets assume you are starting fresh (either in a brand new game or a new BitNode)
 2. Open buy-server.js and perform the following changes
 	- `spendPercentage = 0.2`
 3. (Optional) If you do not have access to the stock market or you do not have 64GB of RAM on your home machine
-	- Open restart-scripts.js and perform the following changes
-		- `skipStockBot = true` (requires a $6b buy in)
-		- `skipBuyServer = true` (requires you have 64GB of RAM to run concurrently)
+	- Open restart-scripts.js and perform the following changes as needed
+		- `runHacknetMgr = true` (unless you are on a BitNode that makes this less viable)
+		- `runStockBot = false` (requires a $26b buy in)
+		- `runBuyServer = false` (requires you have 64GB of RAM to run concurrently)
 4. In terminal run restart-scripts.js
 	- It should now start auto-spreader-v2, coordinator, hack-daemon, check-status, and hacknet-mgr scripts
 	- Your first few remote bots will start working on the servers that fit the criteria set in coordinator.js
@@ -94,13 +95,14 @@ const loopInterval 	= 1000;		// Amount of time the coordinator waits per loop. C
 ## hack-daemon.js (9.35 GB)
 The bot itself. This script is ran on all remote machines and works with the information produced by the coordinator to figure out who to target, how many threads are needed, and whether they have permission to run a task. Unlike basic hack scripts, this will always try to do something thanks to the information available at all times. 
 
-All three actions (hack, grow, weaken) are done via their own script, but these scripts only do two things: their given task to the target server and reporting the start and finish of said task to the coordinator. Both grow and hack can and will generate an increase in security and we use that information to run preemptive weaken threads. 
+All three actions (hack, grow, weaken) are done via their own script, but these scripts only do two things: their given task to the target server and reporting the start and finish of said task to the coordinator. Both grow and hack can and will generate an increase in security and we use that information to run preemptive weaken threads.
 
 Note: This script cannot run standalone! It will wait for the coordinator to populate the data it needs within the ports.
 
 **General Task Loop** 
 
 The hack-daemon will loop through all targets obtained from the coordinator and perform the following for each task:
+0. If share is enabled and the script is running on your owned machines, dedicate all remaining resources to running  shareCPU script and skip the rest of the loop.
 1. See if the target falls within the criteria to work our task on.
 	- If it is, ask coordinator for lock
 		- If we get lock, move forward
@@ -168,6 +170,9 @@ Hacking is fast and dumb, so we must be extra careful we do not overdo it. But b
 
 `RequiredThreads = ((MoneyAvailable - MoneyThreshold) / HackChance) - NumThreadsHacking`
 
+### shareCPU.js (4.00 GB)
+Sharing is a functionality used only on your home or purchased servers that will give hacking contracts and reputation generation a percentage boost for each thread actively running it. Unlike the above scripts, this script does not report to the coordinator nor does it have any conditions to run other than having Port 17 set (for now).
+
 ## auto-spread-v2.js (4.95 GB)
 Will seek out, root, copy files to, and begin scripts for all servers in the network. It will keep searching for new servers until you have all programs to do so. This is where the coordinator starts, getting a full list of all servers in the BitNode. This script also doubles as a means to refresh all files across the network. That way, any changes made on the home server will be reflected by the rest when this is done.
 
@@ -226,12 +231,23 @@ But this script has problems. First it requires $31b in funds to get up and runn
 - Access to Market Data TIX API ($25b)
 
 ## stock-bot-v2.js (23.7 GB)
-This script was written by [u/peter_lang](https://www.reddit.com/user/peter_lang/) and his script can be found [here](https://www.reddit.com/r/Bitburner/comments/rsqffz/bitnode_8_stockmarket_algo_trader_script_without/). This script makes full use of shorts and longs found in BitNode 8 and by my eyes looks to be one of the best at fully using actual math to do the job of what a 4S Market Data API would do. I'll admit, I haven't used this script yet as I am on another BitNode, but until then this gets to sit here until I do use it (and modify it to my own needs).
+This script was written by [u/peter_lang](https://www.reddit.com/user/peter_lang/) and his script can be found [here](https://www.reddit.com/r/Bitburner/comments/rsqffz/bitnode_8_stockmarket_algo_trader_script_without/). This script makes full use of shorts and longs found in BitNode 8 and is the best at using actual math to do the job of what a 4S Market Data API and Access would do (saving you $26b). But just like the base stock-bot, this will take time to get up to speed and even then, its down to luck (I rarely see it go beyond $1t with it running on its own until after 18hrs)
 
 **Requirements:**
 - Be on or have finished BitNode 8
-- Access to the TX API
-- Optional: Access to the 4S market Data API
+
+## corpo.js (1.02 TB) 
+This beefy script was originally written by [Kamukrass](https://github.com/kamukrass/Bitburner) and can be found [here](https://github.com/kamukrass/Bitburner/blob/develop/corp.js) and has been COMPLTELY rewritten by myself. After 3 days of work, I now have this, a script that will correctly follow [a well known guide](https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing) and do so smartly. Due to the nature of starting a corporation and the price of the APIs required, this is not a set it and forget it script. This **REQUIRES** that you already have a running corporation with actual profits to make full use of this script.
+
+Honestly, this script will require its own page of information to describe everything it does. But the gist is that it will create a Tobacco division and fully automate its management from there. It can increase office size and assign employees. It will completely manage all your upgrades and research. It will make new products, figure out their optimal market price (until you unlock Market-TA.I and II), and repeat the process. It will even handle any new division you add that can create products (though for now only Healthcare) and do the same thing Tobacco does all over again.
+
+Only downside: It has a hefty **1 Terabyte RAM** requirement.
+
+**Requirements:**
+- $150b (personal) to create a corporation
+- 1TB of RAM
+- A starting business division [**Follow this guide!!**](https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing)
+- Office and Warehouse APIs ($100b corp funds)
 
 ## getServerStatus.js (2.2 GB)
 A terminal only script that you can use to get all the information you'll need a one or more servers. I find this to be more informative than any built in exe you can create and it can give you information that'd be useful for your botnet. Just run the command below in the terminal along with the money threshold (0.75) and the host names separated by spaces between each.
