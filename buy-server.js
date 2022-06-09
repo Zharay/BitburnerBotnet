@@ -7,6 +7,7 @@ export async function main(ns) {
 	const spendPercentage = 0.2; 		// Percentage of maximum money to spend on server upgrades.
 	const ramUsageThreshold = 0.8;		// Percentage of global ram used in hacks. If it goes beyond this, upgrade for more capacity.
 	const waitInterval = 1000*60*1; 	// Time to wait between cycles (in ms)
+	const files = ["hack-daemon.js", "easy-hack.js", "weaken.js", "grow.js", "hack.js", "shareCPU.js"];
 
 	var fKill = ns.getPortHandle(20);
 	var fHostKill = ns.getPortHandle(18);
@@ -61,7 +62,6 @@ export async function main(ns) {
 					break;
 				}
 				
-				var files = ["hack-daemon.js", "easy-hack.js", "weaken.js", "grow.js", "hack.js", "raze.js", "shareCPU.js"];
 				ns.print("Copying files to server...");
 				await ns.scp(files, hostname); 
 				
@@ -167,7 +167,6 @@ export async function main(ns) {
 							return;
 						}
 
-						var files = ["hack-daemon.js", "easy-hack.js", "weaken.js", "grow.js", "hack.js", "raze.js"];
 						ns.print("Copying files to server...");
 						await ns.scp(files, hostname); 
 

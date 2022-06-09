@@ -2,9 +2,10 @@
 export async function main(ns) {
 	ns.disableLog("ALL");
 
-	const debug = false;	// 	Enables debug logs. 
-	const homeCPU = 1;		//	The number of CPUs on your home server. Better to just set it here than waste RAM
-	const expRuns = 2;		//	The number of cycles to complete before looking to using your remaining RAM on EXP farms
+	const debug = false;			// 	Enables debug logs. 
+	const homeCPU = 1;				//	The number of CPUs on your home server. Better to just set it here than waste RAM
+	const expRuns = 2;				//	The number of cycles to complete before looking to using your remaining RAM on EXP farms
+	const homeReservedRAM = 5;		// 	(GB) Amount of RAM to reserve on home server.
 
 	var host = ns.getHostname();
 	ns.print("Host: " + host);
@@ -52,6 +53,7 @@ export async function main(ns) {
 	var hackID = new Array(jTargets.length).fill(0);
 	
 	var curRuns = 0;
+	var reservedRam = host == "home" ? homeReservedRAM : 0;
 
 	while(fKill.peek() == "NULL PORT DATA" && fHostKill.peek() != host) {
 		jTargets = JSON.parse(gTargets.peek());
@@ -60,8 +62,8 @@ export async function main(ns) {
 
 		// If share is enabled, stop everything and just share.
 		if (fShare.peek() != "NULL PORT DATA" && (host == "home" || host.includes("pserv"))) {
-			if (ns.getScriptRam("shareCPU.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) {
-				var numThreads = Math.floor((ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam("shareCPU.js"));
+			if (ns.getScriptRam("shareCPU.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) {
+				var numThreads = Math.floor((ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) / ns.getScriptRam("shareCPU.js"));
 
 				if (numThreads > 0) {
 					ns.print(`[${target}] Sharing CPU to contracts... (Threads: ${numThreads})`);
@@ -96,7 +98,7 @@ export async function main(ns) {
 			 */						
 			var securityThreshold = ns.getServerMinSecurityLevel(target) + 5;
 			if ((ns.getServerSecurityLevel(target) > securityThreshold || jStatus[indexTarget].security > 5) 
-					&& (ns.getScriptRam("weaken.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) 
+					&& (ns.getScriptRam("weaken.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.weakenLock == "") {
 
 				// Try to set lock		
@@ -131,7 +133,7 @@ export async function main(ns) {
 					// [NOTE] Weaken lowers security by 0.05 per thread!
 					// If there is a security breach, multiply the threads we need by 2x
 					var reqThreads = (Math.ceil((ns.getServerSecurityLevel(target) + securityThreat - securityThreshold) / 0.05) * securityBreach) - currentThreads;
-					var numThreads = Math.min(reqThreads, Math.floor((ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam("weaken.js")));
+					var numThreads = Math.min(reqThreads, Math.floor((ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) / ns.getScriptRam("weaken.js")));
 					
 					if (numThreads > 0) {
 						ns.print(`[${target}] Weakening... (Threads: ${numThreads})`);
@@ -168,7 +170,7 @@ export async function main(ns) {
 			 * 					If there is no lock set.
 			 */
 			if ((ns.getServerMoneyAvailable(target) - (ns.getServerMoneyAvailable(target) - (ns.hackAnalyze(target) * jStatus[indexTarget].hackThreads * ns.hackAnalyzeChance(target)))) < (ns.getServerMaxMoney(target)*0.98) 
-					&& (ns.getScriptRam("grow.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) 
+					&& (ns.getScriptRam("grow.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.growLock == "") {
 				
 				// Try to set lock
@@ -202,11 +204,11 @@ export async function main(ns) {
 					
 					var reqThreads = 1;
 					if (ns.getServerMoneyAvailable(target) == 0 || amountGrow <= 0)
-						reqThreads = (ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam("grow.js");
+						reqThreads = (ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) / ns.getScriptRam("grow.js");
 					else 
 						reqThreads = ns.growthAnalyze(target, amountGrow, (host == "home" ? homeCPU : 1)) - currentThreads;
 					
-					var numThreads = Math.floor(Math.min(reqThreads, (ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam("grow.js")));
+					var numThreads = Math.floor(Math.min(reqThreads, (ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) / ns.getScriptRam("grow.js")));
 
 					if (numThreads > 0) {
 						ns.print(`[${target}] Growing... (Threads: ${numThreads})`);
@@ -246,7 +248,7 @@ export async function main(ns) {
 			var moneyTreshold = ns.getServerMaxMoney(target) * threshModifier;
 			if (ns.getServerMoneyAvailable(target) >= moneyTreshold 
 					&& ns.hackAnalyzeChance(target) >= 0.1
-					&& (ns.getScriptRam("hack.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) 
+					&& (ns.getScriptRam("hack.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.hackLock == "") {
 
 				// Try to set lock
@@ -274,7 +276,7 @@ export async function main(ns) {
 
 					// Take chance into consideration...
 					var reqThreads = Math.floor((ns.hackAnalyzeThreads(target, ns.getServerMoneyAvailable(target) - moneyTreshold)) / ns.hackAnalyzeChance(target)) - currentThreads;
-					var numThreads = Math.floor(Math.min(reqThreads, (ns.getServerMaxRam(host) - ns.getServerUsedRam(host)) / ns.getScriptRam("hack.js")));
+					var numThreads = Math.floor(Math.min(reqThreads, (ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) / ns.getScriptRam("hack.js")));
 
 					if (numThreads > 0) {
 						ns.print(`[${target}] Hacking... (Threads: ${numThreads})`);
@@ -308,7 +310,7 @@ export async function main(ns) {
 		 * 	We only go into this if we have enough RAM to do so after going trough all our targets.
 		 */
 		jExp = JSON.parse(gExp.peek());
-		var availableRAM = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
+		var availableRAM = ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam;
 		var minRamRequired = (ns.getScriptRam("weaken.js") + ns.getScriptRam("grow.js") + ns.getScriptRam("hack.js"));
 		ns.print(`EXP Ram Left: ${availableRAM} (Req: ${minRamRequired})`);
 		if (availableRAM >= minRamRequired && jExp.length > 0 && curRuns >= expRuns) {
