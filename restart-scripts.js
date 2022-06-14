@@ -1,3 +1,16 @@
+/**Shuts down everything. Then restarts them again!
+ * Unfortunately it's not as robust as it sounds. It uses the
+ * host list provided by the coordinator to do the heavy lifting
+ * for us. Then it kills each server's script before running the 
+ * main scripts used by the home server (namely auto-spread-v2 which
+ * will do the job of re-uploading files, running the coordinator, and
+ * every hack-daemon on the network).
+ * 
+ * This script is also used to quickly launch optional scripts.
+ * 	Written By: Zharay
+ * 	URL: https://github.com/Zharay/BitburnerBotnet
+**/
+
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
@@ -16,8 +29,9 @@ export async function main(ns) {
 	var isStockBot = false;
 	var isCorpo = false;
 	processes.forEach( function(x) {
-		if (x.filename != "restart-scripts.js" && x.filename != "stock-bot.js" 
-				&& x.filename != "stock-bot-v2.js" && x.filename != "corpo.js")
+		if (x.filename != "restart-scripts.js" 
+				&& x.filename != "stock-bot.js" && x.filename != "stock-bot-v2.js"
+				&& x.filename != "corpo.js")
 			ns.kill(x.pid);
 		else if (x.filename == "stock-bot.js" || x.filename == "stock-bot-v2.js")
 			isStockBot = true;

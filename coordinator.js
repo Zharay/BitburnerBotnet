@@ -1,16 +1,25 @@
+/** The brains of the botnet. The coordinator runs purely off information provided by the 20 ports available in BitBurner.
+ * This is not a stand alone script. Please refer to the GitHub page for more information!
+ * 	
+ * 	Written By: Zharay
+ * 	URL: https://github.com/Zharay/BitburnerBotnet
+**/
+
+
+// Options
+const debug 			= false;		// Enables multiple log messages. Leave this alone unless you want lag.
+const threshModifier 	= 0.75;			// Money threshold that we hack towards (we always grow to 100%)
+const minHackChance 	= 0;	 		// Min hack chance to target
+const minServerGrowth	= 30;			// Min server growth to target
+const maxServerGrowth	= 100;			// Max server growth to target
+const minServerMoney 	= 1e6;			// Min money the server has to target (1e9 = 10^9 = $1.0b)
+const maxServerMoney	= 2e10;			// Max money the server has to target (2e9 = 2 * 10^9 = $2.0b)
+const loopInterval 		= 500;			// Amount of time the coordinator waits per loop. Can be CPU intensive.
+const manipulateStocks 	= true;			// If enabled we will update our target lists to include servers we own stock in.
+
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
-
-	// Options
-	const debug 			= false;		// Enables multiple log messages. Leave this alone unless you want lag.
-	const threshModifier 	= 0.75;			// Money threshold that we hack towards (we always grow to 100%)
-	const minHackChance 	= 0;	 		// Min hack chance to target
-	const minServerGrowth	= 30;			// Min server growth to target
-	const maxServerGrowth	= 100;			// Max server growth to target
-	const minServerMoney 	= 1e6;			// Min money the server has to target (1e9 = 10^9 = $1.0b)
-	const maxServerMoney	= 2e10;			// Max money the server has to target (2e9 = 2 * 10^9 = $2.0b)
-	const loopInterval 		= 500;			// Amount of time the coordinator waits per loop. Can be CPU intensive.
 
 	if (ns.peek(8) == "NULL PORT DATA" && ns.args.length == 0) {
 		ns.print("Is this loading from a save?");
@@ -59,14 +68,15 @@ export async function main(ns) {
 	 * 	4 : GLOBAL : JSON 	RAM Info	{Total RAM Available, Total RAM Used}
 	 * 	5 : GLOBAL : JSON	EXP Farm	[{Target, Hack Threads, Hack RAM Used, Weaken Threads, Weaken RAM Used, Weaken Grow Threads, Grow RAM Used}]
 	 *	6 : GLOBAL : JSON	Flag List 	[{Target, Hack Lock, H Lock Time, Weaken Lock, W Lock Time, Grow Lock, G Lock Time}] 	
-	 	...
-		8 : GLOBAL : ARRAY	Target List [target]
+	 *	...
+	 *	8 : GLOBAL : ARRAY	Target List [target]
 	 *	...
 	 * 	11 : HOME : RAW STACK String (Host added to botnet)
 	 * 	12 : HOME : RAW STACK String (Host being deleted)
 	 * 	13 : HOME : RAW STACK JSON {Target being worked on, Task, Done?, Threads, RAM, Time, Security}
 	 * 	14 : HOME : RAW STACk JSON {EXP being worked on, Task, Done?, Threads, RAM}
 	 * 	15 : HOME : RAW STACK JSON {Target for lock, Host, Task, Done?} 
+	 * 	16 : HOME : RAW STACK JSON {TIX, Short?, Long?}
 	 * 	...
 	 *  17 : FLAG : RAW String (Toggle Share)
 	 *  18 : FLAG : RAW STACK String (Specific hostname to kill softly)
@@ -88,24 +98,29 @@ export async function main(ns) {
 	
 	/** 0. Setup target servers and status
 	 * 		Criteria :	Must be rooted
-	 * 					Must have a hack chance >= 0% (you can still hack at 0%, it just requires weakening first)
+	 * 					Must be within our hack level
+	 * 			(		Must have a hack chance >= 0% (you can still hack at 0%, it just requires weakening first)
 	 * 					Server growth >= 20 ()
 	 * 					Max money >= $10.00 B
+	 * 			)		OR if it is a stock server, ignore the above 3
 	 */
 	hackTargets.sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a));	
 	hackTargets = hackTargets.filter( function(x) {
-		return ns.hasRootAccess(x) && ns.hackAnalyzeChance(x) >= minHackChance 
-			&& ns.getServerGrowth(x) >= minServerGrowth && ns.getServerGrowth(x) <= maxServerGrowth
-			&& ns.getServerMaxMoney(x) >= minServerMoney && ns.getServerMaxMoney(x) <= maxServerMoney 
+		return 	(getIsTarget(ns, x) || (manipulateStocks && getServerTIXSymbol(x) != undefined))
+			&& ns.hasRootAccess(x)
 			&& ns.getServerRequiredHackingLevel(x) <= ns.getPlayer().hacking;
 	});	
 	
 	hackTargets.forEach( function(x) {
+		let TIX = getServerTIXSymbol(x) != undefined ? getServerTIXSymbol(x) : "";
 		jTargetServers.push( {"target" : x, "thresholdModifier": threshModifier, 
+								"TIX": TIX, "hackerLevel": ns.getServerRequiredHackingLevel(x),
 								"maxMoney" : ns.getServerMaxMoney(x), "curMoney" : ns.getServerMoneyAvailable(x),
 								"growth" : ns.getServerGrowth(x), "security" : ns.getServerSecurityLevel(x), 
 								"minSecurity" : ns.getServerMinSecurityLevel(x)} );
-		jTargetStatus.push( {"target" : x, "security" : 0,
+		jTargetStatus.push( {"target" : x, "security" : 0, 
+								"TIX": TIX, "isTarget": getIsTarget(ns, x),
+								"isLong" : false, "isShort" : false,
 								"hackThreads" : 0, "hackRam" : 0, 
 								"weakenThreads" : 0, "weakenRam" : 0,
 								"growThreads" : 0, "growRam" : 0} );
@@ -120,10 +135,10 @@ export async function main(ns) {
 	 * 					Must be rooted
 	 * 					Required Hacking Level <= Current Hack Level
 	 */
+	expTargets = expTargets.filter ( (e) => !hackTargets.includes(e) );
 	expTargets = expTargets.filter( function(x) {
 		return ns.hasRootAccess(x) && ns.getServerMaxMoney(x) > 0 && ns.getServerRequiredHackingLevel(x) <= ns.getPlayer().hacking;
 	});
-	expTargets = expTargets.filter ( (e) => !hackTargets.includes(e) );
 	expTargets.forEach( function(x) {
 		ns.print("EXP SERVER: " + x);
 		jExpStatus.push({"target" : x, 
@@ -138,11 +153,15 @@ export async function main(ns) {
 	 */
 	hardTargets = hardTargets.filter ( x => ns.getServerRequiredHackingLevel(x) > ns.getPlayer().hacking || !ns.hasRootAccess(x) );
 	hardTargets.forEach ( function(x) {
+		var TIX = getServerTIXSymbol(x) != undefined ? getServerTIXSymbol(x) : "";
 		jHardTargetServers.push({"target" : x, "thresholdModifier": threshModifier, 
+								"TIX": TIX,"hackerLevel": ns.getServerRequiredHackingLevel(x),
 								"maxMoney" : ns.getServerMaxMoney(x), "curMoney" : ns.getServerMoneyAvailable(x),
 								"growth" : ns.getServerGrowth(x), "security" : ns.getServerSecurityLevel(x), 
 								"minSecurity" : ns.getServerMinSecurityLevel(x)} );
-		jHardTargetStatus.push( {"target" : x, "security" : 0,
+		jHardTargetStatus.push( {"target" : x, "security" : 0, 
+								"TIX": TIX, "isTarget": getIsTarget(ns, x),
+								"isLong" : false, "isShort" : false,
 								"hackThreads" : 0, "hackRam" : 0, 
 								"weakenThreads" : 0, "weakenRam" : 0,
 								"growThreads" : 0, "growRam" : 0} );
@@ -168,6 +187,7 @@ export async function main(ns) {
 	var inTasks = ns.getPortHandle(13);		// Check task queue - Brought in from hack.js, weaken.js, and grow.js 
 	var inExp = ns.getPortHandle(14);		// EXP queue. Filtered in from auto-spread and added to over time when we are high enough level to do so
 	var inLock = ns.getPortHandle(15);		// Lock queue. Used by hack-daemons to lock down a single server for a particular task. Eliminates race conditions.
+	var inStocks = ns.getPortHandle(16);	// Stock queue. Used by stock-bots to report any shares we have longs or shorts of.
 	var fKill = ns.getPortHandle(20);		// The Kill command. If this is received, this script will gracefully stop.
 
 	gTargets.clear();
@@ -181,6 +201,7 @@ export async function main(ns) {
 	inTasks.clear();
 	inExp.clear();
 	inLock.clear();
+	inStocks.clear();
 	fKill.clear();
 
 	// Start with posting our targets
@@ -198,10 +219,9 @@ export async function main(ns) {
 		var newHackables = [];
 		for(var i = 0; i < hardTargets.length; i++) {
 			if (ns.hasRootAccess(hardTargets[i]) && ns.getServerRequiredHackingLevel(hardTargets[i]) <= ns.getPlayer().hacking) {
+				var TIX = getServerTIXSymbol(hardTargets[i]) != undefined ? getServerTIXSymbol(hardTargets[i]) : "";
 				ns.print(`[HARD] We can now hack [${hardTargets[i]}]. Processing now!`);
-				if (ns.hasRootAccess(hardTargets[i]) && ns.hackAnalyzeChance(hardTargets[i]) >= minHackChance 
-						&& ns.getServerGrowth(hardTargets[i]) >= minServerGrowth && ns.getServerGrowth(hardTargets[i]) <= maxServerGrowth 
-						&& ns.getServerMaxMoney(hardTargets[i]) >= minServerMoney && ns.getServerMaxMoney(hardTargets[i]) <= maxServerMoney) {
+				if (ns.hasRootAccess(hardTargets[i]) && (getIsTarget(ns, hardTargets[i]) || (manipulateStocks && TIX != ""))) {
 					ns.print(`[HARD] Adding [${hardTargets[i]}] as a money target`);
 					hackTargets.push(hardTargets[i]);
 					jTargetStatus.push(jHardTargetStatus[i]);
@@ -262,8 +282,9 @@ export async function main(ns) {
 				var oldTask = jTargetStatus.find(x => x.target == newTask.target);
 
 				if (!oldTask) { // This should never happen!
-					ns.print("[TASK] Adding task information for [" + newTask.target + "]...");
-					var addTask = {"target" : newTask.target, "security" : parseFloat(newTask.security),
+					ns.print("ERROR [TASK] Adding task information for [" + newTask.target + "]...");
+					
+					var addTask = {"target" : newTask.target, "security" : parseFloat(newTask.security), "isLong" : false, "isShort" : false,
 						"hackThreads" : (newTask.task == "hack" ? parseInt(newTask.threads) : 0), "hackRam" : ((newTask.task == "hack" ? parseFloat(newTask.ram) : 0)), 
 						"weakenThreads" : (newTask.task == "weaken" ? parseInt(newTask.threads) : 0), "weakenRam" : ((newTask.task == "weaken" ? parseFloat(newTask.ram) : 0)),
 						"growThreads" : (newTask.task == "grow" ? parseInt(newTask.threads) : 0), "growRam" : ((newTask.task == "grow" ? parseFloat(newTask.ram) : 0)) };
@@ -311,7 +332,7 @@ export async function main(ns) {
 
 				var oldTask = jExpStatus.find(x => x.target == newTask.target);
 				if (!oldTask) {
-					ns.print("A[EXP] dding EXP farm info for [" + newTask.target + "]...");
+					ns.print("[EXP] Adding EXP farm info for [" + newTask.target + "]...");
 					var addTask = {"target" : newTask.target,
 						"hackThreads" : (newTask.task == "hack" ? parseInt(newTask.threads) : 0), "hackRam" : ((newTask.task == "hack" ? parseFloat(newTask.ram) : 0)), 
 						"weakenThreads" : (newTask.task == "weaken" ? parseInt(newTask.threads) : 0), "weakenRam" : ((newTask.task == "weaken" ? parseFloat(newTask.ram) : 0)),
@@ -362,7 +383,7 @@ export async function main(ns) {
 
 				var oldLock = jTargetFlags.find(x => x.target == newLock.target);
 				if (!oldLock) { // This should never happen
-					if(debug) ns.print("[LOCK] Adding Lock info for [" + newLock.target + "]...");
+					if(debug) ns.print("ERROR [LOCK] Adding Lock info for [" + newLock.target + "]...");
 					var addLock = {"target" : newLock.target,
 						"hackLock" : (newLock.task == "hack" ? newLock.host : ""), "hackTime" : 0, 
 						"weakenLock" : (newLock.task == "weaken" ? newLock.host : ""), "weakenTime" : 0,
@@ -432,10 +453,26 @@ export async function main(ns) {
 			}
 		}
 
-		// 7. Update gTargets -- Global list of all the target servers. Used mainly by check-status (Port 1)
+		// 7. Check the stock market queue for any shorts/longs -- This will always run every 5 seconds if a stock-bot is running!
+		while (!inStocks.empty()) {
+			var rawStock = inStocks.read();
+			if (rawStock != "NULL PORT DATA" && manipulateStocks) {
+				var jStock = JSON.parse(rawStock);
+				var refStatus = jTargetStatus.find(x => x.TIX == jStock.sym);
+				if (refStatus) {
+					refStatus.isLong = jStock.long;
+					refStatus.isShort = jStock.short;
+					refStatus.isTarget = getIsTarget(ns, refStatus.target) || jStock.long || jStock.short;
+				}
+			}
+		}
+
+		// 8. Update gTargets -- Global list of all the target servers. Used mainly by check-status (Port 1)
 		jTargetServers = [];
 		hackTargets.forEach( function(x) {
+			let TIX = getServerTIXSymbol(x) != undefined ? getServerTIXSymbol(x) : "";
 			jTargetServers.push( {"target" : x, "thresholdModifier": threshModifier, 
+								"TIX": TIX, "hackerLevel": ns.getServerRequiredHackingLevel(x),
 								"maxMoney" : ns.getServerMaxMoney(x), "curMoney" : ns.getServerMoneyAvailable(x),
 								"growth" : ns.getServerGrowth(x), "security" : ns.getServerSecurityLevel(x), 
 								"minSecurity" : ns.getServerMinSecurityLevel(x),});
@@ -444,16 +481,16 @@ export async function main(ns) {
 		gTargets.tryWrite(JSON.stringify(jTargetServers));
 		if(debug) ns.print("Update global targets!");
 		
-		// 8. Update gStatus -- Global list of each target's status. Used by hack-daemon to make decision on how many threads to use. (Port 3)
+		// 9. Update gStatus -- Global list of each target's status. Used by hack-daemon to make decision on how many threads to use. (Port 3)
 		gStatus.clear();
 		gStatus.tryWrite(JSON.stringify(jTargetStatus));
 		if(debug) ns.print("Target status updated!");
 
-		// 9. Update gExp -- Global list of all EXP targets. Same as status. Only really used by check-status (Port 5)
+		// 10. Update gExp -- Global list of all EXP targets. Same as status. Only really used by check-status (Port 5)
 		gExp.clear();
 		gExp.tryWrite(JSON.stringify(jExpStatus));
 
-		// 10. Update jTargetFlags and gLock -- Here is where we clear anyone taking too long trying to use their lock.
+		// 11. Update jTargetFlags and gLock -- Here is where we clear anyone taking too long trying to use their lock.
 		jTargetFlags.forEach (h => {
 			if(h.hackLock != "") 	h.hackTime++;
 			if(h.weakenLock != "") 	h.weakenTime++;
@@ -478,7 +515,7 @@ export async function main(ns) {
 		gLock.clear();
 		gLock.tryWrite(JSON.stringify(jTargetFlags));
 
-		// 11. Update gRAM -- Global ram usage/maximum. THIS IS VERY SLOW as this only gets updated every second. As such it's only used by check-status.
+		// 12. Update gRAM -- Global ram usage/maximum. THIS IS VERY SLOW as this only gets updated every second. As such it's only used by check-status.
 		var tTotalRam = 0, tUsedRam = 0;
 		jHostServers.forEach( function(x) {
 			if (ns.serverExists(x.host)) {
@@ -495,3 +532,55 @@ export async function main(ns) {
 		await ns.sleep(loopInterval);
 	}
 }
+
+function getIsTarget(ns, target) {
+	return ns.hackAnalyzeChance(target) >= minHackChance 
+			&& ns.getServerGrowth(target) >= minServerGrowth 
+			&& ns.getServerGrowth(target) <= maxServerGrowth 
+			&& ns.getServerMaxMoney(target) >= minServerMoney 
+			&& ns.getServerMaxMoney(target) <= maxServerMoney;
+}
+
+/**
+ * Hard-coded list of servers and their equivalent stock symbol. 
+ * There is no way to get this dynamically, thus breaking my self imposed rule to not "cheat"
+ * @param {String} server 	Full Server name.
+ * @returns {String} 		Stock symbol. Will return undefined if server is not found.
+ */
+function getServerTIXSymbol(server) {
+	const serverSymbols = {
+		"aerocorp" : "AERO",
+		"alpha-ent" : "APHE",
+		"blade" : "BLD",
+		"clarkinc" : "CLRK",
+		"comptek" : "CTK",
+		"catalyst" : "CTYS",
+		"defcomm" : "DCOMM" ,
+		"ecorp" : "ECP",
+		"fulcrumtech" : "FLCM",
+		"foodnstuff" : "FNS",
+		"4sigma" : "FSIG",
+		"global-pharm" : "GPH",
+		"helios" : "HLS",
+		"icarus" : "ICRS",
+		"joesguns" : "JGN",
+		"kuai-gong" : "KGI",
+		"lexo-corp" : "LXO",
+		"microdyne" : "MDYN",
+		"megacorp" : "MGCP",
+		"netlink" : "NTLK",
+		"nova-med" : "NVMD",
+		"omega-net" : "OMGA",
+		"omnia" : "OMN",
+		"omnitek" : "OMTK",
+		"rho-construction" : "RHOC",
+		"sigma-cosmetics" : "SGC",
+		"solaris" : "SLRS",
+		"stormtech" : "STM",
+		"syscore" : "SYSC",
+		"titan-labs" : "TITN",
+		"univ-energy" : "UNV",
+		"vitalife" : "VITA"
+	}
+	return serverSymbols[server];
+  }

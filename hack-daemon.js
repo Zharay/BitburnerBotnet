@@ -1,3 +1,16 @@
+/** The botnet's workers. 
+ * The hack-daemon will intelligently hack, weaken, and grow with the 
+ * exact amount of threads needed. It can also handle hack EXP farming,
+ * sharing of the CPU (only for home and private servers), and stock
+ * market manipulation!
+ * 
+ *	Written By: Zharay
+ * 	URL: https://github.com/Zharay/BitburnerBotnet
+ * 
+ * 	Requires that the coordinator is running with targets posted via ports.
+**/
+
+
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
@@ -97,7 +110,8 @@ export async function main(ns) {
 			 * 						4) If there is no lock
 			 */						
 			var securityThreshold = ns.getServerMinSecurityLevel(target) + 5;
-			if ((ns.getServerSecurityLevel(target) > securityThreshold || jStatus[indexTarget].security > 5) 
+			if (jStatus[indexTarget].isTarget 
+					&& (ns.getServerSecurityLevel(target) > securityThreshold || jStatus[indexTarget].security > 5) 
 					&& (ns.getScriptRam("weaken.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.weakenLock == "") {
 
@@ -146,7 +160,7 @@ export async function main(ns) {
 					await ns.sleep(1000);
 					
 					jLockRequest.done = true;
-					ns.print(`[${target}] Removing weakening lockdown...`);
+					ns.print(`[${target}] Removing weakening lock down...`);
 					await outLock.tryWrite(JSON.stringify(jLockRequest));
 				} else {
 					ns.print(`[${target}] LATE LOCKED : [${currentLocks.weakenLock}] has locked weakening...`);
@@ -169,7 +183,8 @@ export async function main(ns) {
 			 * 					If we have enough RAM to even run the script
 			 * 					If there is no lock set.
 			 */
-			if ((ns.getServerMoneyAvailable(target) - (ns.getServerMoneyAvailable(target) - (ns.hackAnalyze(target) * jStatus[indexTarget].hackThreads * ns.hackAnalyzeChance(target)))) < (ns.getServerMaxMoney(target)*0.98) 
+			if (jStatus[indexTarget].isTarget 
+					&& (ns.getServerMoneyAvailable(target) - (ns.getServerMoneyAvailable(target) - (ns.hackAnalyze(target) * jStatus[indexTarget].hackThreads * ns.hackAnalyzeChance(target)))) < (ns.getServerMaxMoney(target)*0.98) 
 					&& (ns.getScriptRam("grow.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.growLock == "") {
 				
@@ -221,7 +236,7 @@ export async function main(ns) {
 					await ns.sleep(1000);
 					
 					jLockRequest.done = true;
-					ns.print(`[${target}] Removing growth lockdown...`);
+					ns.print(`[${target}] Removing growth lock down...`);
 					await outLock.tryWrite(JSON.stringify(jLockRequest));
 
 				} else {
@@ -241,12 +256,14 @@ export async function main(ns) {
 
 			/**Hack <Hack is fast and dumb. Be careful!>
 			 * Only hack if:	If the money available is greater than our threshold (which is a % of its maximum)
+			 * 						OR if it's a short stock (hack it to the ground for stock profits)
 			 * 					If the chance to hack the target is over 10%
 			 * 					If you have the RAM needed to run the script
 			 * 					If there is no lock
 			 */
-			var moneyTreshold = ns.getServerMaxMoney(target) * threshModifier;
-			if (ns.getServerMoneyAvailable(target) >= moneyTreshold 
+			var moneyThreshold = ns.getServerMaxMoney(target) * threshModifier;
+			if (jStatus[indexTarget].isTarget && !jStatus[indexTarget].isLong
+					&& ((ns.getServerMoneyAvailable(target)  >= moneyThreshold) || jStatus[indexTarget].isShort)
 					&& ns.hackAnalyzeChance(target) >= 0.1
 					&& (ns.getScriptRam("hack.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.hackLock == "") {
@@ -275,7 +292,7 @@ export async function main(ns) {
 					}
 
 					// Take chance into consideration...
-					var reqThreads = Math.floor((ns.hackAnalyzeThreads(target, ns.getServerMoneyAvailable(target) - moneyTreshold)) / ns.hackAnalyzeChance(target)) - currentThreads;
+					var reqThreads = Math.floor((ns.hackAnalyzeThreads(target, ns.getServerMoneyAvailable(target) - (moneyThreshold * (jStatus[indexTarget].isShort ? 0 : 1)))) / ns.hackAnalyzeChance(target)) - currentThreads;
 					var numThreads = Math.floor(Math.min(reqThreads, (ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) / ns.getScriptRam("hack.js")));
 
 					if (numThreads > 0) {
@@ -289,7 +306,7 @@ export async function main(ns) {
 					await ns.sleep(1000);
 					
 					jLockRequest.done = true;
-					ns.print(`[${target}] Removing hack lockdown...`);
+					ns.print(`[${target}] Removing hack lock down...`);
 					await outLock.tryWrite(JSON.stringify(jLockRequest));
 				} else {
 					ns.print(`[${target}] LATE LOCKED : [${currentLocks.hackLock}] has locked hacking...`);
@@ -319,7 +336,7 @@ export async function main(ns) {
 			var farmIndex = randomIntFromInterval(1, jExp.length) - 1;
 			ns.print("[EXP] You have chosen [" + jExp[farmIndex].target + "]");
 
-			// We split avaiable RAM by a 40/40/20% split. Hacking always goes too fast and is too devistating otherwise.
+			// We split available RAM by a 40/40/20% split. Hacking always goes too fast and is too devastating otherwise.
 			var weakThreads = Math.floor((availableRAM * 0.4) / ns.getScriptRam("weaken.js"));
 			var growThreads = Math.floor((availableRAM * 0.4) / ns.getScriptRam("grow.js"));
 			var hackThreads = Math.floor((availableRAM * 0.2) / ns.getScriptRam("hack.js"));
