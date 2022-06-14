@@ -1,3 +1,9 @@
+/**	An log only script that reports the current status of our botnet's activities. 
+ * Driven 100% by port data
+ * 	Written By: Zharay
+ * 	URL: https://github.com/Zharay/BitburnerBotnet
+**/
+
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");
@@ -44,13 +50,15 @@ export async function main(ns) {
 			if (jTargets.length == jStatus.length) {
 				for(var i = 0; i < jTargets.length; i++) {
 
-					if (isNaN(jTargets[i].security) || isNaN(jTargets[i].curMoney) || isNaN(jTargets[i].maxMoney))
+					if (isNaN(jTargets[i].security) || isNaN(jTargets[i].curMoney) || isNaN(jTargets[i].maxMoney) || !jStatus[i].isTarget)
 						continue;
-
-					ns.print(`Target: ${jTargets[i].target}\t(HL ${ns.getServerRequiredHackingLevel(jTargets[i].target)})`);
+						
+					var stockLabel = jStatus[i].isLong ? "\t[L]" : (jStatus[i].isShort ? "\t[S]" : "");
+					ns.print(`Target: ${jTargets[i].target} ${stockLabel}\t (HL ${jTargets[i].hackerLevel})`);
 					ns.print(`Security: ${ns.nFormat(jTargets[i].security, "0.00")}  / ${(jTargets[i].minSecurity+5)} [${ns.nFormat(jStatus[i].security, "0.00")}]`);
 					ns.print(`Money: ${ns.nFormat(jTargets[i].curMoney, "$0.000a")} / ${ns.nFormat(jTargets[i].maxMoney, "$0.000a")} [${ns.nFormat(jTargets[i].maxMoney * jTargets[i].thresholdModifier, "$0.000a")}]`);
 					ns.print(`Growth: ${jTargets[i].growth} | Hack Chance: ${ns.nFormat(ns.hackAnalyzeChance(jTargets[i].target), "0.00%")}`);
+					if (jStatus[i].isLong || jStatus[i].isShort) ns.print(`Longs?: ${jStatus[i].isLong} | Shorts?: ${jStatus[i].isShort}`);
 
 					if (isNaN(jStatus[i].hackRam) || isNaN(jStatus[i].growRam) || isNaN(jStatus[i].weakenRam))
 						continue;

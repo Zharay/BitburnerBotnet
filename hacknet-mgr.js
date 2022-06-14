@@ -1,5 +1,22 @@
+/**An upgrade manager for the HackNet!
+ * Intelligently purchases and upgrades servers of your hacknet. It
+ * will do so by only upgrading the bits that are cheapest before bringing 
+ * the rest of the farm up to the same level.
+ * 
+ * This script super efficient with your money and will only stop when it 
+ * reaches whatever you've set the max income to.
+ * 
+ * Can be run completely stand alone!
+ * 
+ * 	Originally By: ?????
+ *	NOTE: IF YOU KNOW WHO WROTE THIS SCRIPT PLEASE TELL ME!! 
+ *	I want to buy that person a beer lol. This script is super clean!
+**/
+
 /** @param {NS} ns **/
 export async function main(ns) {
+	
+	/** OPTIONS */
 	let maxIncome = 1e9;
 	let spendPercentage = 0.1;
 

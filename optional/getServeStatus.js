@@ -1,27 +1,18 @@
-function convertMoney (labelValue) {
-
-    // Nine Zeroes for Billions
-    return Math.abs(Number(labelValue)) >= 1.0e+9
-
-    ? (Math.abs(Number(labelValue)) / 1.0e+9).toFixed(2) + "B"
-    // Six Zeroes for Millions 
-    : Math.abs(Number(labelValue)) >= 1.0e+6
-
-    ? (Math.abs(Number(labelValue)) / 1.0e+6).toFixed(2) + "M"
-    // Three Zeroes for Thousands
-    : Math.abs(Number(labelValue)) >= 1.0e+3
-
-    ? (Math.abs(Number(labelValue)) / 1.0e+3).toFixed(2) + "K"
-
-    : Math.abs(Number(labelValue));
-}
+/** A more in-depth server information script
+ * With provided threshold, you can obtain all the info you need on the servers you want
+ * 
+ * Usage: run optional/getServerStatus.js [ThresholdModifier] [Server] [Server] ...
+ * Example: run optional/getServerStatus.js 0.8 n00dles harakiri-sushi
+ * 
+ * Written By: Zharay
+ * URL: https://github.com/Zharay/BitburnerBotnet
+**/
 
 /** @param {NS} ns */
-
 export async function main(ns) {
 
 	if (!ns.args.length) {
-		ns.tprint("ERROR: Arguements = [ThresholdModifier] [Server]")
+		ns.tprint("ERROR: Arguements = [ThresholdModifier] [Server] [Server] [Server]...")
 		return;
 	}
 
@@ -47,9 +38,10 @@ export async function main(ns) {
 
 			var moneyTreshold = ns.getServerMaxMoney(target) * threshModifier;
 			var securityThreshold = ns.getServerMinSecurityLevel(target) + 5;
-		
+
+			ns.tprint(`RAM: ${ns.getServerRam(target)}`);
 			ns.tprint("Security: " + ns.getServerSecurityLevel(target) + " / " + securityThreshold);
-			ns.tprint("Money: " + convertMoney(ns.getServerMoneyAvailable(target)) + " / " + convertMoney(moneyTreshold) + " (" + convertMoney(ns.getServerMaxMoney(target)) + ")");
+			ns.tprint("Money: " + ns.nFormat(ns.getServerMoneyAvailable(target), "$0.00a") + " / " + ns.nFormat(moneyTreshold, "$0.00a") + " (" + ns.nFormat(ns.getServerMaxMoney(target), "$0.00a") + ")");
 			ns.tprint("Growth: " + ns.getServerGrowth(target));
 		}
 

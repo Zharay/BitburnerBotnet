@@ -2,7 +2,7 @@
  *  Written By: Zharay
  *  URL: https://github.com/Zharay/BitburnerBotnet
  *  Requires 1.6Gb of RAM to run! (could be done remotely on any server)
- */
+**/
 
 /** @param {NS} ns */
 export async function main(ns) {

@@ -1,3 +1,10 @@
+/** Baby's first hack script.
+ * Used by low RAM servers that don't have 8GB or more for our hack-daemon.
+ * Because it's simple, it's dumb and does not report to the coordinator.
+ * 	Written By: Zharay
+ * 	URL: https://github.com/Zharay/BitburnerBotnet
+**/
+
 /** @param {NS} ns */
 export async function main(ns) {
 	var threshModifier = 0.8;

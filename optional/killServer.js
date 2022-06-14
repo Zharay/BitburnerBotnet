@@ -1,3 +1,11 @@
+/**A script for sending a kill command to a specific hack-daemon in the network.
+ * It does this by sending the server's name to port 18.
+ * If the hack-daemon see's its hostname on this port, it will shutdown.
+ * 
+ * 	Written By: Zharay
+ * 	URL: https://github.com/Zharay/BitburnerBotnet
+**/
+
 /** @param {NS} ns */
 export async function main(ns) {
 	ns.disableLog("ALL");

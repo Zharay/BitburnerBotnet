@@ -1,3 +1,10 @@
+/**Hack() script.
+ * This will report via ports to the coordinator which has 0 RAM cost!
+ * Requires the hack-daemon!
+ * 	Written By: Zharay
+ *  URL: https://github.com/Zharay/BitburnerBotnet
+**/
+
 /** @param {NS} ns */
 export async function main(ns) {
 	var target = "";

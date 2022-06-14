@@ -1,22 +1,20 @@
 /** Script to run your corporation for you.
- * 		Rewritten By: Zharay
- * 		Originally By: Kamukrass
- * 		GitHub: https://github.com/Zharay/BitburnerBotnet
- * 		
- * 		Automates your corporation smartly following the guide below. 
+ * Automates your corporation smartly by strictly following the guide below.	
+ * (Master Guide))[https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing]
+ * Please follow the first section before even starting this script!
+ * RECOMMENDED THAT YOU START A BUSINESS IN SOMETHING SIMPLE LIKE AGRICULTURE FIRST!
  * 
- * 		RECOMMENDED THAT YOU START A BUSINESS IN SOMETHING SIMPLE LIKE AGRICULTURE FIRST!
- *  	
- * 		Will be using (this guide)[https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing]
- * 		Please follow the first section before even starting this script.
- * 
- * 		Required:
- * 			- 1TB RAM
- * 			- $150b (personal)
- * 			- Office API ($50b corp funds)
- * 			- Warehouse API ($50b corp funds)
- * 			- DO NOT GET THOSE API UNTIL YOU HAVE PROFITS
- */
+ * 	Heavily Rewritten By: Zharay
+ * 	Originally By: Kamukrass
+ * 	Original URL: https://github.com/kamukrass/Bitburner/blob/develop/corp.js
+ * 	Mod URL: https://github.com/Zharay/BitburnerBotnet
+ * 	REQUIRES:
+ * 		- 1TB RAM
+ * 		- $150b (personal)
+ * 		- Office API ($50b corp funds)
+ * 		- Warehouse API ($50b corp funds)
+ * 		- DO NOT GET THOSE API UNTIL YOU HAVE PROFITS
+**/
 
 /** Options */
 const debug = false;				// Enables more text information in console log
@@ -113,7 +111,7 @@ export async function main(ns) {
 
 		// Obtain at each city: 2800 Hardware, 96 Robots, 2.52k AI Cores, 146.4k Real Estate 
 			// ACTUAL VALUES (one 10sec tick) = Hardware: 267.5 | Robots: 9.6 | AI Cores: 244.5 | Real Estate: 11940
-		// Will end up with little no no funds after
+		// Will end up with little to no funds after
 
 		// Find Investor for $5t for 10% stock.
 			// Once again, if you are not on BN3 then it'll be half this. Do the trick mentioned to double it.
@@ -696,36 +694,6 @@ async function initCities(ns, division, productCity = "Aevum") {
 
 	ns.print(`Investment offer for 10% shares: ${ns.nFormat(ns.corporation.getInvestmentOffer().funds, "$0.00a")}`);
 	ns.toast(`Investment offer for 10% shares: ${ns.nFormat(ns.corporation.getInvestmentOffer().funds, "$0.00a")}`, "info", 5000);
-
-	// Rest has been take out. This should be done manually.
-/*	ns.print("Funds before public: " + ns.nFormat(ns.corporation.getCorporation().funds, "$0.00a"));
-
-	// So problem: You are about to invest in a new industry whose profits will not be all that high.
-	// You also are not guaranteed to have an investor at the level you wanted.
-	// And now you are reducing your overall corporate profit, slowing down growth, to make player bucks?
-	// This is better off done manually by the player when they feel it is a good time to do so!
-	// (At least a dividend hasn't been set I guess)
-	ns.corporation.goPublic(800e6);
-
-	ns.print("Funds after  public: " + ns.nFormat(ns.corporation.getCorporation().funds, "$0.00a"));
-
-	// set employees back to normal operation
-	// 	Updated to use expandEmployees
-	for (const city of cities) {
-		const employees = ns.corporation.getOffice(division.name, city).employees.length;
-		await ns.corporation.setAutoJobAssignment(division.name, city, "Business", 0);
-		await expandEmployees(ns, division, city, 0);
-	}
-
-	// with gained money, expand to the most profitable division ($400b investment)
-	//	Uh, so what if you don't get enough to do this?? (fixing this for now)
-	//	Once again this is something better done manually
-	if (ns.corporation.getCorporation().funds >= ns.corporation.getExpandIndustryCost("Healthcare")) {
-		ns.corporation.expandIndustry("Healthcare", "Healthcare");
-		var hcIndex = ns.corporation.getCorporation().divisions.findIndex (x => x.type == "Healthcare");
-		if (hcIndex >= 0) await initCities(ns, ns.corporation.getCorporation().divisions[hcIndex]);
-	}
-*/
 }
 
 /**

@@ -2,7 +2,12 @@
  * Will seek out, root, copy files to, and begin scripts for all servers in the networks.
  * It will keep searching for new servers until you have all port opening programs to do so.
  * This is how the coordinator is ran. This is also where it gets the starting list of targets.
- */
+ * 
+ * 	Modified By: Zharay
+ * 	Original Spreader By: KrunoSaho
+ * 	Original URL: https://gist.github.com/KrunoSaho/f0aa418e16e828b0ebc0585d1ebcf6b5
+ * 	Mod URL: https://github.com/Zharay/BitburnerBotnet/blob/main/corpo.js
+**/
 
 /** @param {NS} ns **/
 export async function main(ns) {
