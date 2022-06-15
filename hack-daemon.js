@@ -183,7 +183,7 @@ export async function main(ns) {
 			 * 					If we have enough RAM to even run the script
 			 * 					If there is no lock set.
 			 */
-			if (jStatus[indexTarget].isTarget 
+			if (((jStatus[indexTarget].isTarget && !jStatus[indexTarget].isLong && !jStatus[indexTarget].isShort) || (jStatus[indexTarget].isLong && jStatus[indexTarget].profitChange < 0))
 					&& (ns.getServerMoneyAvailable(target) - (ns.getServerMoneyAvailable(target) - (ns.hackAnalyze(target) * jStatus[indexTarget].hackThreads * ns.hackAnalyzeChance(target)))) < (ns.getServerMaxMoney(target)*0.98) 
 					&& (ns.getScriptRam("grow.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 
 					&& currentLocks.growLock == "") {
@@ -262,7 +262,7 @@ export async function main(ns) {
 			 * 					If there is no lock
 			 */
 			var moneyThreshold = ns.getServerMaxMoney(target) * threshModifier;
-			if (jStatus[indexTarget].isTarget && !jStatus[indexTarget].isLong
+			if (((jStatus[indexTarget].isTarget && !jStatus[indexTarget].isLong && !jStatus[indexTarget].isShort) || ((jStatus[indexTarget].isShort && jStatus[indexTarget].profitChange > 0)))
 					&& ((ns.getServerMoneyAvailable(target)  >= moneyThreshold) || jStatus[indexTarget].isShort)
 					&& ns.hackAnalyzeChance(target) >= 0.1
 					&& (ns.getScriptRam("hack.js") <= ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - reservedRam) 

@@ -16,7 +16,9 @@
  *    - Stock Market Access ($1b)
  *    - NONE of the APIs!
 **/
-const shortAvailable = true; // Requires you to be on BN 8.1 or have beaten 8.2
+const shortAvailable = true; 	// Requires you to be on BN 8.1 or have beaten 8.2
+const liquidateAtS4 = true;		// Will immediately liquidate all stocks for you to manually buy 4S Market API and Data 
+const liquidateThresh = 31e9;	// Threshold it'll wait for to do above (give it a ton of headroom!)
 const commission = 100000;
 const samplingLength = 30;
 
@@ -79,7 +81,7 @@ export async function main(ns) {
 		symChanges[sym] = []
 	}
 
-	while (fSell.peek() == "NULL PORT DATA") {
+	while (fSell.peek() == "NULL PORT DATA" && !hasAlerted) {
 		await ns.sleep(2000);
 		totalEquity = 0;
 		let myStocks = [];
@@ -158,11 +160,11 @@ export async function main(ns) {
 				}
 			}
 
-			totalEquity += (longShares * bidPrice) + (shortShares * askPrice);
+			totalEquity += (longShares * bidPrice) + (shortShares * askPrice) - (2 * commission);
 
 
-			if (totalEquity >= 31e9 && !hasAlerted) {
-				await ns.alert(`You have a possible market value of ${ns.nFormat(totalEquity, "$0.00a")}!\nYou may want to consider liquidating your assets to purchase the APIs needed for stock-bot.js!`);
+			if (liquidateAtS4 && totalEquity + ns.getServerMoneyAvailable("home") >= liquidateThresh) {
+				await ns.alert(`You have a possible market value of ${ns.nFormat(totalEquity, "$0.00a")}!\nI've liquidated your stocks, but you have to purchase the APIs needed for stock-bot.js yourself!`);
 				hasAlerted = true;
 			}
 		}
@@ -171,7 +173,7 @@ export async function main(ns) {
 		reportStocks(ns, myStocks);
 	}
 
-	if (fSell.peek() == "sell") {
+	if (fSell.peek() == "sell" || hasAlerted) {
 		const prioritizedSymbols = [...ns.stock.getSymbols()];
 		var sellTotal = 0;
 		for (const sym of prioritizedSymbols) {
@@ -187,6 +189,7 @@ export async function main(ns) {
 
 			ns.print(`Liquidated Assets for ${ns.nFormat(sellTotal, "$0.00a")}`);
 		}
+		reportStocks(ns, myStocks);
 	}
 }
 
@@ -201,9 +204,11 @@ function reportStocks(ns, stocks) {
 
 	for (const stock of stocks) {
 		outStocks.tryWrite(JSON.stringify({
-			"sym": stock.sym,
-			"short": stock.shortShares > 0,
-			"long": stock.longShares > 0
+			  "sym": stock.sym
+			, "short": stock.shortShares > 0
+			, "long": stock.longShares > 0
+			, "profitChange" : NaN
+			, "profitPotential" : NaN
 		}));
 	}
 }

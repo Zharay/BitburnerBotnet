@@ -53,12 +53,13 @@ export async function main(ns) {
 					if (isNaN(jTargets[i].security) || isNaN(jTargets[i].curMoney) || isNaN(jTargets[i].maxMoney) || !jStatus[i].isTarget)
 						continue;
 						
-					var stockLabel = jStatus[i].isLong ? "\t[L]" : (jStatus[i].isShort ? "\t[S]" : "");
-					ns.print(`Target: ${jTargets[i].target} ${stockLabel}\t (HL ${jTargets[i].hackerLevel})`);
+					var TIX = jStatus[i].TIX != "" ? `[${jStatus[i].TIX}]` : "";
+					var stockLabel = jStatus[i].isLong ? "   [L] " : (jStatus[i].isShort ? "   [S]" : "");
+					ns.print(`Target: ${jTargets[i].target} ${TIX} ${stockLabel}     (HL ${jTargets[i].hackerLevel})`);
 					ns.print(`Security: ${ns.nFormat(jTargets[i].security, "0.00")}  / ${(jTargets[i].minSecurity+5)} [${ns.nFormat(jStatus[i].security, "0.00")}]`);
 					ns.print(`Money: ${ns.nFormat(jTargets[i].curMoney, "$0.000a")} / ${ns.nFormat(jTargets[i].maxMoney, "$0.000a")} [${ns.nFormat(jTargets[i].maxMoney * jTargets[i].thresholdModifier, "$0.000a")}]`);
 					ns.print(`Growth: ${jTargets[i].growth} | Hack Chance: ${ns.nFormat(ns.hackAnalyzeChance(jTargets[i].target), "0.00%")}`);
-					if (jStatus[i].isLong || jStatus[i].isShort) ns.print(`Longs?: ${jStatus[i].isLong} | Shorts?: ${jStatus[i].isShort}`);
+					if (jStatus[i].isLong || jStatus[i].isShort) ns.print(`Longs?: ${jStatus[i].isLong} | Shorts?: ${jStatus[i].isShort} | pChng: ${ns.nFormat(jStatus[i].profitChange, "0.00%")}`);
 
 					if (isNaN(jStatus[i].hackRam) || isNaN(jStatus[i].growRam) || isNaN(jStatus[i].weakenRam))
 						continue;

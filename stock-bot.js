@@ -1,4 +1,4 @@
-/** stock-bot is the OG stock market script that has been expanded from it's original
+/** stock-bot is an OG stock market script that has been expanded from it's original
  * It uses forecasts, profit potential and potential change math to figure out 
  * whether to sell stocks. It buys when stocks have a good forecast. And finally, it is 
  * short capable for those on BN.8 and have it unlocked.
@@ -17,16 +17,16 @@
 **/
 
 const shortAvailable = true;		// Requires you to be on BN 8.1 or have beaten 8.2
-const fracL = 0.05;					// Fraction of wealth to keep as cash on player
-const fracH = 0.1;					// Fraction of wealth to spend on stocks
+const fracL = 0.025;				// Fraction of market wealth to keep as cash on player
+const fracH = 0.05;					// Fraction of market wealth to spend on stocks
 const commission = 100000; 			// Buy or sell commission [DO NOT CHANGE]
 const numCycles = 1; 				// Number of cycles to wait before checking market. Each cycle is 4 seconds.
 const longForecastBuy = 0.55;		// LONG: Projected forecast value at which to buy
 const longForecastSell = 0.5;		// LONG: Projected forecast value at which to sell
-const expProfitLossLong = -0.25; 	// LONG: The expected percentage of profits now compared to when purchased (ie. -35% forecasted profit)
+const expProfitLossLong = -0.25; 	// LONG: The percentage difference of profits now compared to when purchased (ie. -25% forecasted profit)
 const shortForecastBuy = 0.45;		// SHORT: Projected forecast value at which to buy
 const shortForecastSell = 0.5;		// SHORT: Projected forecast value at which to sell
-const expProfitGainShort = -2.0;	// SHORT: The expected percentage of profits now compared to when purchased (ie. -200% forecasted profit)
+const expProfitGainShort = 0.25;	// SHORT: The percentage difference of profits now compared to when purchased (ie. -200% forecasted profit)
 const transactionLength = 50;		// Will limit the log print specified amount
 
 /** @param {NS} ns */
@@ -57,8 +57,8 @@ export async function main(ns) {
 
 			// Handle Shorts
 			if (stock.shortShares > 0 && shortAvailable
-				&& (/*percentageChange(stock.initProfitPotential, stock.profitPotential) <= expProfitGainShort 
-					|| stock.profitPotential > 0 ||*/ stock.forecast > shortForecastSell)) {
+				&& (percentageChange(stock.initProfitPotential, stock.profitPotential) > expProfitGainShort 
+					|| stock.profitPotential > 0 || stock.forecast > shortForecastSell)) {
 				let gained = ns.stock.sellShort(stock.sym, stock.shortShares) * stock.shortShares;
 				prevTrans.push(copyStock(stock, "sale", false, stock.shortShares, percentageChange(stock.initProfitPotential, stock.profitPotential), gained));
 				stock.shortShares = 0;
@@ -67,19 +67,22 @@ export async function main(ns) {
 		}
 		
 		//Sell shares (long) if not enough cash in hand
-		for (const stock of stocks) {
-			if (ns.getServerMoneyAvailable("home") < (fracL * corpus) && stock.longShares > 0 ) {
-				let cashNeeded = (corpus * fracH) - ns.getServerMoneyAvailable("home") + commission;
-				let numShares = Math.floor(cashNeeded / stock.price);
-				let gained = ns.stock.sell(stock.sym, numShares) * numShares;
-				prevTrans.push(copyStock(stock, "cash", true, stock.longShares, percentageChange(stock.initProfitPotential, stock.profitPotential), gained));
-				stock.longShares -= numShares;
-				corpus -= commission;
+		if (ns.getServerMoneyAvailable("home") < (fracL * corpus)) {
+			for (const stock of stocks) {
+				if (ns.getServerMoneyAvailable("home") < (fracL * corpus) && stock.longShares > 0 ) {
+					let cashNeeded = (corpus * fracH) - ns.getServerMoneyAvailable("home") + commission;
+					let numShares = Math.floor(cashNeeded / stock.price);
+					let gained = ns.stock.sell(stock.sym, numShares) * numShares;
+					prevTrans.push(copyStock(stock, "cash", true, stock.longShares, percentageChange(stock.initProfitPotential, stock.profitPotential), gained));
+					stock.longShares -= numShares;
+					corpus -= commission;
+				}
 			}
 		}
 
 		//Buy shares with cash remaining in hand
-        for (const stock of stocks) {
+        for (let i = 0; i < stocks.length; i++) {
+			let stock = stocks[i];
             let cashToSpend = ns.getServerMoneyAvailable("home") - (fracH * corpus);
 			if (stock.forecast > longForecastBuy) {
 				// Attempt to buy a long. Only do so if it's not at a loss (due to commission)
@@ -90,7 +93,12 @@ export async function main(ns) {
 					let price = ns.stock.buy(stock.sym, numShares) * numShares;
 					if (price > 0) prevTrans.push(copyStock(stock, "", true, numShares, condition, price));
 				}
-			} else if (stock.forecast < shortForecastBuy && shortAvailable) {
+			}
+
+			// Grab the stock from back to front - Shorts need least profit potential
+			stock = stocks[stocks.length - 1 - i];
+			cashToSpend = ns.getServerMoneyAvailable("home") - (fracH * corpus);
+			if (stock.forecast < shortForecastBuy && shortAvailable) {
 				// Attempt to buy a short. We don't care if it's at a loss (that's the point?)
 				if (stock.shortShares > 0) continue;
 				let numShares = Math.min(stock.maxShares, Math.floor((cashToSpend - commission) / stock.bidPrice));
@@ -99,8 +107,6 @@ export async function main(ns) {
 				if (price > 0) prevTrans.push(copyStock(stock, "", false, numShares, condition, price));
 			}
         }
-
-		// Keep only the last 5 sales for our log
 
 		refreshStocks(ns, stocks);
 		displayLog(ns, stocks, prevTrans);
@@ -189,10 +195,10 @@ function refreshStocks(ns, stocks) {
  * @param {Boolean} isLong 
  * @param {Number} transAmount 
  * @param {Number} condition 
- * @param {Number} transPrice 
+ * @param {Number} transSum 
  * @returns {Object}
  */
-function copyStock(stock, saleType, isLong, transAmount, condition, transPrice) {
+function copyStock(stock, saleType, isLong, transAmount, condition, transSum) {
 	let newStock = {};
 	newStock.sym = stock.sym;
 	newStock.price = stock.price;
@@ -214,7 +220,7 @@ function copyStock(stock, saleType, isLong, transAmount, condition, transPrice) 
 	newStock.saleType = saleType;
 	newStock.transLong = isLong;
 	newStock.transAmount = transAmount;
-	newStock.transPrice = transPrice;	
+	newStock.transSum = transSum;	
 	newStock.condition = condition;
 	newStock.transTime = 0;
 
@@ -224,7 +230,7 @@ function copyStock(stock, saleType, isLong, transAmount, condition, transPrice) 
 		newStock.isFlip = stock.forecast > shortForecastSell;
 
 	if (saleType != "")
-		newStock.profit = transPrice - (transAmount * isLong ? stock.longPrice : stock.shortPrice) - (2 * commission);
+		newStock.profit = transSum - (transAmount * isLong ? stock.longPrice : stock.shortPrice) - (2 * commission);
 	else
 		newStock.profit = 0;
 
@@ -246,7 +252,7 @@ function displayLog(ns, stocks, prevTransactions) {
 	
 	prevTransactions.sort((a, b) => b.transTime - a.transTime);
 
-	for (let i = Math.max(prevTransactions.length - transactionLength, 0); i < prevTransactions.length; i++) {
+	for (let i = 0; i < Math.min(Math.max(prevTransactions.length - transactionLength, 0),  prevTransactions.length); i++) {
 		let trans = prevTransactions[i];
 		let time = ns.tFormat(trans.transTime).replace(" hours", "h").replace(" minutes", "m").replace(" seconds", "s");
 		// WARN | Sold [SYM] TYPE for {profit} ({time}) [{pChage} | {ProfitPot} | {Forecast}]
@@ -255,8 +261,8 @@ function displayLog(ns, stocks, prevTransactions) {
 			ns.print(`${trans.saleType == "cash"  ? "ERROR | Shedded" : "WARN | Sold"} ${ns.nFormat(trans.transAmount,"0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.profit, "$0.00a")} profit (${time} ago) [C:${ns.nFormat(trans.condition, "0.00%")} | P:${trans.profitPotential > 0} | F:${ns.nFormat(trans.forecast, "0.00")}]`);
 			recouped += trans.profit;
 		} else {
-			ns.print(`INFO | Bought ${ns.nFormat(trans.transAmount,"0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.transPrice, "$0.00a")} (${time} ago) [${trans.transLong ? "C:" + ns.nFormat(trans.condition, "$0.00a") : "P:" + trans.profitPotential > 0} | F:${ns.nFormat(trans.forecast, "0.000")}]`);
-			spent += trans.transPrice;
+			ns.print(`INFO | Bought ${ns.nFormat(trans.transAmount,"0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.transSum, "$0.00a")} (${time} ago) [${trans.transLong ? "C:" + ns.nFormat(trans.condition, "$0.00a") : "P:" + trans.profitPotential > 0} | F:${ns.nFormat(trans.forecast, "0.000")}]`);
+			spent += trans.transSum;
 		}
 		trans.transTime += 4 * 1000 * numCycles;
 	}
@@ -279,7 +285,7 @@ function displayLog(ns, stocks, prevTransactions) {
 				, ns.nFormat(s.longShares > 0 ? s.longShares : s.shortShares, "0a")
 				, ns.nFormat(s.longShares > 0 ? s.bidPrice : s.askPrice, "$0.00a")
 				, ns.nFormat(s.longShares > 0 ? s.longPrice : s.shortPrice, "$0.00a")
-				, ns.nFormat(s.longShares > 0 ? (s.price * s.longShares) - ((s.longPrice * s.longShares)) : (s.askPrice * s.shortShares) - ((s.shortPrice * s.shortShares)), "$0.00a")
+				, ns.nFormat(s.longShares > 0 ? (s.bidPrice * s.longShares) - ((s.longPrice * s.longShares)) : (s.askPrice * s.shortShares) - ((s.shortPrice * s.shortShares)), "$0.00a")
 				, ns.nFormat(percentageChange(s.initProfitPotential, s.profitPotential), "0.00%")
 				, s.profitPotential > 0
 				, ns.nFormat(s.forecast, "0.00"));
@@ -287,13 +293,13 @@ function displayLog(ns, stocks, prevTransactions) {
 			tradeValue += (s.longPrice * s.longShares) + (s.shortPrice * s.shortShares);
 		}
 	}
-	if (stocks.length <= 0) ns.print("NO STOCKS IN PORTFOLIO");
+	if (stocks.length <= 0) ns.print("ERROR | NO STOCKS IN PORTFOLIO");
 
 	ns.print(" ");
 	ns.print(`INFO | Total Market Value: ${ns.nFormat(marketValue, "$0.000a")}`);
 	ns.print(`INFO | Total Amount Spent: ${ns.nFormat(tradeValue, "$0.000a")}`);
-	ns.print(`INFO | Current Equity: ${ns.nFormat(marketValue - tradeValue, "$0.000a")}`)
-	ns.print(`INFO | Run Spent: ${ns.nFormat(spent, "$0.000a")} | Run Recouped: ${ns.nFormat(recouped, "$0.000a")} | Run Revenue: ${ns.nFormat(recouped - spent, "$0.000a")}`);
+	ns.print(`INFO | Total Profits: ${ns.nFormat(marketValue - tradeValue, "$0.000a")}`)
+	//ns.print(`INFO | Run Spent: ${ns.nFormat(spent, "$0.000a")} | Run Recouped: ${ns.nFormat(recouped, "$0.000a")} | Run Revenue: ${ns.nFormat(recouped - spent, "$0.000a")}`);
 }
 
 /**
@@ -306,6 +312,8 @@ function displayLog(ns, stocks, prevTransactions) {
     if (!outStocks.empty()) return;
     
     for (const stock of stocks) {
-        outStocks.tryWrite(JSON.stringify({"sym" : stock.sym, "short" : stock.shortShares > 0, "long" : stock.longShares > 0}));
+        outStocks.tryWrite(JSON.stringify({"sym" : stock.sym, "short" : stock.shortShares > 0, "long" : stock.longShares > 0
+		, "profitChange" : percentageChange(stock.initProfitPotential, stock.profitPotential)
+		, "profitPotential" : stock.profitPotential > 0}));
     }
 }

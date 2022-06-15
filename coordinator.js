@@ -140,8 +140,9 @@ export async function main(ns) {
 		return ns.hasRootAccess(x) && ns.getServerMaxMoney(x) > 0 && ns.getServerRequiredHackingLevel(x) <= ns.getPlayer().hacking;
 	});
 	expTargets.forEach( function(x) {
+		var TIX = getServerTIXSymbol(x) != undefined ? getServerTIXSymbol(x) : "";
 		ns.print("EXP SERVER: " + x);
-		jExpStatus.push({"target" : x, 
+		jExpStatus.push({"target" : x, "TIX": TIX,
 							"hackThreads" : 0, "hackRam" : 0, 
 							"weakenThreads" : 0, "weakenRam" : 0,
 							"growThreads" : 0, "growRam" : 0});
@@ -155,7 +156,7 @@ export async function main(ns) {
 	hardTargets.forEach ( function(x) {
 		var TIX = getServerTIXSymbol(x) != undefined ? getServerTIXSymbol(x) : "";
 		jHardTargetServers.push({"target" : x, "thresholdModifier": threshModifier, 
-								"TIX": TIX,"hackerLevel": ns.getServerRequiredHackingLevel(x),
+								"TIX": TIX, "hackerLevel": ns.getServerRequiredHackingLevel(x),
 								"maxMoney" : ns.getServerMaxMoney(x), "curMoney" : ns.getServerMoneyAvailable(x),
 								"growth" : ns.getServerGrowth(x), "security" : ns.getServerSecurityLevel(x), 
 								"minSecurity" : ns.getServerMinSecurityLevel(x)} );
@@ -169,7 +170,7 @@ export async function main(ns) {
 								"hackLock" : "", "hackTime" : 0, 
 								"weakenLock" : "", "weakenTime" : 0,
 								"growLock" : "", "growTime" : 0} );
-		jHardExpStatus.push({"target" : x, 
+		jHardExpStatus.push({"target" : x, "TIX": TIX,
 							"hackThreads" : 0, "hackRam" : 0, 
 							"weakenThreads" : 0, "weakenRam" : 0,
 							"growThreads" : 0, "growRam" : 0});
@@ -463,6 +464,8 @@ export async function main(ns) {
 					refStatus.isLong = jStock.long;
 					refStatus.isShort = jStock.short;
 					refStatus.isTarget = getIsTarget(ns, refStatus.target) || jStock.long || jStock.short;
+					refStatus.profitPotential = jStock.profitPotential;
+					refStatus.profitChange = jStock.profitChange;
 				}
 			}
 		}
