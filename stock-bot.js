@@ -252,7 +252,7 @@ function displayLog(ns, stocks, prevTransactions) {
 	
 	prevTransactions.sort((a, b) => b.transTime - a.transTime);
 
-	for (let i = 0; i < Math.min(Math.max(prevTransactions.length - transactionLength, 0),  prevTransactions.length); i++) {
+	for (let i = Math.max(prevTransactions.length - transactionLength, 0); i < prevTransactions.length; i++) {
 		let trans = prevTransactions[i];
 		let time = ns.tFormat(trans.transTime).replace(" hours", "h").replace(" minutes", "m").replace(" seconds", "s");
 		// WARN | Sold [SYM] TYPE for {profit} ({time}) [{pChage} | {ProfitPot} | {Forecast}]
@@ -296,8 +296,8 @@ function displayLog(ns, stocks, prevTransactions) {
 	if (stocks.length <= 0) ns.print("ERROR | NO STOCKS IN PORTFOLIO");
 
 	ns.print(" ");
-	ns.print(`INFO | Total Market Value: ${ns.nFormat(marketValue, "$0.000a")}`);
 	ns.print(`INFO | Total Amount Spent: ${ns.nFormat(tradeValue, "$0.000a")}`);
+	ns.print(`INFO | Total Market Value: ${ns.nFormat(marketValue, "$0.000a")}`);
 	ns.print(`INFO | Total Profits: ${ns.nFormat(marketValue - tradeValue, "$0.000a")}`)
 	//ns.print(`INFO | Run Spent: ${ns.nFormat(spent, "$0.000a")} | Run Recouped: ${ns.nFormat(recouped, "$0.000a")} | Run Revenue: ${ns.nFormat(recouped - spent, "$0.000a")}`);
 }

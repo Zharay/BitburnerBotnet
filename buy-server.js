@@ -68,7 +68,7 @@ export async function main(ns) {
 			ns.print("Not at maximum server count. Attempting to buy some...");
 
 			while ((ns.getServerMoneyAvailable("home") * spendPercentage) > ns.getPurchasedServerCost(Math.pow(2, memLevel))) {
-				ns.print(`Purchasing a [${Math.pow(2, memLevel)} GB] server... (${ns.nFormat(ns.getPurchasedServerCost(Math.pow(2, memLevel), "$0.00a"))})`);
+				ns.print(`Purchasing a [${Math.pow(2, memLevel)} GB] server... (${ns.nFormat(ns.getPurchasedServerCost(Math.pow(2, memLevel)), "$0.00a")})`);
 				
 				var hostname = ns.purchaseServer("pserv-" + Math.pow(2, memLevel), Math.pow(2, memLevel));	
 				if (!ns.serverExists(hostname)) {
