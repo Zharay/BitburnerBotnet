@@ -17,10 +17,10 @@
  *    - NONE of the APIs!
 **/
 const shortAvailable = true; 	// Requires you to be on BN 8.1 or have beaten 8.2
-const liquidateAtS4 = true;		// Will immediately liquidate all stocks for you to manually buy 4S Market API and Data 
-const liquidateThresh = 31e9;	// Threshold it'll wait for to do above (give it a ton of headroom!)
-const commission = 100000;
-const samplingLength = 30;
+const liquidateThresh = 31e9;	// Threshold to alert the player that they have enough to buy 4S API and Data
+const liquidateAtS4 = true;		// Will liquidate all stocks once alerted from above. Must buy 4S API and Data manually
+const samplingLength = 30;		// Length of previous tick samples to use to predict its growth state
+const commission = 100000;		// Buy or sell commission [DO NOT CHANGE]
 
 function predictState(samples) {
 	const limits = [null, null, null, null, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 12, 12, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 19, 19, 20];
@@ -163,8 +163,9 @@ export async function main(ns) {
 			totalEquity += (longShares * bidPrice) + (shortShares * askPrice) - (2 * commission);
 
 
-			if (liquidateAtS4 && totalEquity + ns.getServerMoneyAvailable("home") >= liquidateThresh) {
-				await ns.alert(`You have a possible market value of ${ns.nFormat(totalEquity, "$0.00a")}!\nI've liquidated your stocks, but you have to purchase the APIs needed for stock-bot.js yourself!`);
+			if (totalEquity + ns.getServerMoneyAvailable("home") >= liquidateThresh) {
+				if (liquidateAtS4) await ns.alert(`You have a possible market value of ${ns.nFormat(totalEquity, "$0.00a")}!\nI've liquidated your stocks, but you have to purchase the APIs needed for stock-bot.js yourself!`);
+				else await ns.alert(`You have a possible market value of ${ns.nFormat(totalEquity, "$0.00a")}!\nYou may want to liquidate your stocks and purchase the APIs needed for stock-bot.js yourself!`);
 				hasAlerted = true;
 			}
 		}
@@ -173,7 +174,7 @@ export async function main(ns) {
 		reportStocks(ns, myStocks);
 	}
 
-	if (fSell.peek() == "sell" || hasAlerted) {
+	if (fSell.peek() == "sell" || (hasAlerted && liquidateAtS4)) {
 		const prioritizedSymbols = [...ns.stock.getSymbols()];
 		var sellTotal = 0;
 		for (const sym of prioritizedSymbols) {

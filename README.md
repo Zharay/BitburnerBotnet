@@ -30,6 +30,7 @@ Lets assume you are starting fresh (either in a brand new game or a new BitNode)
 	- Open restart-scripts.js and perform the following changes as needed
 		- `runHacknetMgr = true` (unless you are on a BitNode that makes this less viable)
 		- `runStockBot = false` (requires a $26b buy in)
+		- `runStockBotV2 = false` (requires a WSE Account and nothing else)
 		- `runBuyServer = false` (requires you have 64GB of RAM to run concurrently)
 4. In terminal run restart-scripts.js
 	- It should now start auto-spreader-v2, coordinator, hack-daemon, check-status, and hacknet-mgr scripts
@@ -38,7 +39,7 @@ Lets assume you are starting fresh (either in a brand new game or a new BitNode)
 	- Keep this open! It will give you real-time information on your botnet and the servers you are targeting
 6. Let everything run for a while. Eventually you'll reach enough hack skill to make your first few programs.
 	- Once you have BruteSSH.exe, auto-spreader will automatically root servers that require 1 port and add them to your botnet.
-	- I suggest getting a job to earn some extra dough. The first hour can be very slow.
+	- I suggest getting a job to earn some extra cash. The first hour can be very slow.
 7. Once you have enough hack skill, you will start to see targets in your check-status window that are more profitable.
 	- In coordinator.js : `minServerGrowth = 20` (or 30)
 	- In coordinator.js : `minServerMoney = 1e7` (or 1e6) (1e7 is a shorthand way of expressing 10^7 = 10 million)
@@ -48,22 +49,33 @@ Lets assume you are starting fresh (either in a brand new game or a new BitNode)
 	- Keep doing work at jobs as you increase in hack skill! Every bit helps.
 9. Connect to the darkweb and buy what you can (FTPCrack.exe and relaySMTP.exe)
 	- Doing so will add way more to the botnet!
-10. Upgrade your home computer's RAM to 64GB and set `skipBuyServer = false` in restart-scripts.js and rerun it.
+10. Upgrade your home computer's RAM to 64GB then set `runBuyServer = true` in restart-scripts.js and run it.
 	- Alternatively, just run buy-server.js in your terminal
 11. Buy the rest of the port programs from the darkweb (HTTPWorm.exe = $30m and SQLInject.exe = $250m)
 12. You are practically done. The game is now your plaything.
 
-These are the exact steps I took starting BitNode1.2. 9 hours later and the image below is where I am sitting at with my Hack skill at 416 while making $1.38m/sec (and growing)!
+These are the exact steps I took starting BitNode1.2 without any augmentations. 9 hours later and the image below is where I am sitting at with my Hack skill at 416 while making $1.38m/sec (and growing)!
 
 ![9 hours into BitNode1.2](/ss/Screenshot4.jpg)
 
 ### Long Term Notes
 Eventually you'll notice reduction of threads on your targets. This is 100% normal. Notice the security levels and money. Once you have enough RAM, your botnet can easily maintain a balance where everything is within a sweet spot, constantly generating money for you. There is nothing more for you to do except narrow down your targets by increasing minServerMoney and minServerGrowth.
 
+### Hacking Beyond BN1
+Eventually the game will open up new paths of revenue, different ways to beat the game, and even a new stat. However, the one constant that you'll almost always need is a running botnet. Whether it is generating money or not, so long as you have every system doing something, you will gain from it.
+
 # Preface
 Like everyone I started small with the tutorial scripts. I wanted everything to be dynamic, with no hard coded server names as I feel that'd defeat the purpose of this whole game ("lol not cheating in a game promoting hacking and embezzlement"). Once I got something working, I kept asking myself: "Is this efficient enough?"
 
 By trade I am a Software Engineer, I majored in Computer Science, and have been programming for nearly 20 years. It's a habit of mine to look at a problem as ask that question repeatedly. So when I finally came round to playing this game, I thought I'd only do it for a few days and move on. I was mistaken.
+
+## The Rules
+Before I begin let me set the ground rules that I am going by as I feel it's relevant as to why the scripts are the way they are:
+1. **Must be efficient.** I don't want scripts that do things in a round about way. If it's gonna do something, do it efficiently.
+2. **Must be a script.** Important. I do not want classes. I do not want importing of scripts. I want script kiddie play.
+3. **Must not cheat.** Everything must be dynamic. Obtain the data we need with in game functions. If we cannot, use hard coding sparingly.
+4. **Must work.** I don't want a single script to do a half job. I want them to do the whole job if we can.
+5. **Give credit where it's due.** If someone else has done it and I use it as a base, I give full credits to those people.
 
 # How it Works
 Ports, a robust coordinator, and the bots that do the leg work. Basically a [Master-Server Load Balance network](https://en.wikipedia.org/wiki/Load_balancing_(computing))!
@@ -78,7 +90,7 @@ In practice this is a lot more complicated than it seems. I spent days getting t
 Each script serves a specific purpose, the core of which are essential for everything to work.
 
 ## coordinator.js (4.95 GB)
-The heart of the botnet and the handler of nearly all the ports used. Uses heavy use of JSON objects to keep a log of everything going on. This can be ran solo without restart-scripts but you must pass it a list of all servers delimitated by a comma [,] or semicolon [;]. Due to how much information this script must handle, time is always an issue. In fact, it can be considered the a bottleneck. By default it is set to a very generous 1000ms, but it can run smoothly even at 500ms. Keep your (real) processor's capabilities into account when lowering this option!
+The heart of the botnet and the handler of nearly all the ports used. Uses heavy use of JSON objects to keep a log of everything going on. This can be ran solo without restart-scripts but you must pass it a list of all servers deliminated by a comma [,] or semicolon [;]. Due to how much information this script must handle, time is always an issue. In fact, it can be considered a bottleneck. By default it is set to a very generous 1000ms, but it can run smoothly even at 500ms. Keep your (real) processor's capabilities into account when lowering this option!
 
 For information on all the ports, visit the [wiki](https://github.com/Zharay/BitburnerBotnet/wiki)!
 
@@ -88,8 +100,11 @@ const debug 		= false;	// Enables multiple log messages. Leave this alone unless
 const threshModifier 	= 0.75;		// Money threshold that we hack towards (we always grow to 100%)
 const minHackChance 	= 0;	 	// Min hack chance to target
 const minServerGrowth	= 30;		// Min server growth to target
-const minServerMoney 	= 1 * 1e9;	// Min money the server has at its maximum to target (10^9 = $1.0b)
+const maxServerGrowth	= 100;		// Max server growth to target
+const minServerMoney 	= 1e6;		// Min money the server has at its maximum to target (10^9 = $1.0b)
+const maxServerMoney	= 2e9;		// Max money the server has to target (2e9 = 2 * 10^9 = $2.0b)
 const loopInterval 	= 1000;		// Amount of time the coordinator waits per loop. Can be CPU intensive
+const manipulateStocks 	= true;		// If enabled we will update our target lists to include servers we own stock in.
 ```
 
 ## hack-daemon.js (9.35 GB)
@@ -146,6 +161,7 @@ Growth is always a 1 CPU task unless its on the home server. Overall, we always 
 - If, in addition to the above, the number of hack threads will bring the money below that 98% threshold
 - If we have enough RAM to even run the script
 - If there is no lock set
+- If market manipulation is enabled, the server is associated with a stock, we own a long of said stock, and said long is going into negative potential profit
 
 **How much to grow**
 
@@ -165,13 +181,14 @@ Hacking is fast and dumb, so we must be extra careful we do not overdo it. But b
 - If the chance to hack the target is over 10%
 - If you have the RAM needed to run the script
 - If there is no lock
+- If market manipulation is enabled, the server is associated with a stock, we own a short of said stock, and said short is going into positive potential profit
 
 **How many threads to use (when using _ns.hackAnalyze_)**
 
 `RequiredThreads = ((MoneyAvailable - MoneyThreshold) / HackChance) - NumThreadsHacking`
 
 ### shareCPU.js (4.00 GB)
-Sharing is a functionality used only on your home or purchased servers that will give hacking contracts and reputation generation a percentage boost for each thread actively running it. Unlike the above scripts, this script does not report to the coordinator nor does it have any conditions to run other than having Port 17 set (for now).
+The share() function can only be used on your home or purchased servers. For 10 seconds it will give hacking contracts and reputation generation a percentage boost for each thread actively running it. Unlike the above scripts, this script does not report to the coordinator nor does it have any conditions to run other than having Port 17 set. It will continue running until Port 17 is cleared a which point it will immediately end.
 
 ## auto-spread-v2.js (4.95 GB)
 Will seek out, root, copy files to, and begin scripts for all servers in the network. It will keep searching for new servers until you have all programs to do so. This is where the coordinator starts, getting a full list of all servers in the BitNode. This script also doubles as a means to refresh all files across the network. That way, any changes made on the home server will be reflected by the rest when this is done.
@@ -213,28 +230,85 @@ _To find more information on the ports used in this botnet, please refer to the 
 The rest of the scripts in this repo do not have a direct effect on the botnet and are only just extra avenues of obtaining money. Some have been curated from other programmers found on Reddit and Github and tailored to fit my needs. Credit goes to those people with enough drive to provide at least a starting answer to some of the more difficult BitNodes in the game!
 
 ## restart-scripts.js (3.8 GB)
-This is a script that will simply kill all scripts on the home machine (except for the stock-bot) and go about doing the same for all servers there after. It will then clear the ports before restarting auto-spread-v2, hacknet-mgr, and buy-server scripts (also stock-bot is it is not running). This is you're quick and easy way to get everything started!
+This is a script that will simply kill all scripts on the home machine (except for the stock-bot and corpo scripts) and go about doing the same for all servers there after. It will then clear the ports before restarting auto-spread-v2 and any of the optional scripts listed in the options below. This is you're quick and easy way to get everything started!
+
+**Options**
+```
+const runStockBot = false;
+const runStockBotV2 = false;
+const runHacknetMgr = false;
+const runBuyServer = false;
+const runCorpo = false;
+const enableShare = false;
+```
 
 ## hacknet-mgr.js (9.7 GB)
 Who did this script? I don't know! **If someone can find out who, please let me know because this is seriously efficient.** The best Hacknet script out there. It will always upgrade by the most efficient and cost effective method first, leaving the most expensive upgrades for absolutely last. That means it will often buy more servers before looking at the other upgrades on each machine.
 
 If you are just starting out or on a new BitNode run, keep this script running! It will easily outpace a beginner botnet until you have the skill, programs, and augments needed to make it shine!
 
-## stock-bot.js (19.7 GB)
-This script was originally written by [u/havoc_mayhem](https://www.reddit.com/user/havoc_mayhem/) and can be found [here](https://www.reddit.com/r/Bitburner/comments/9o1xle/stock_market_script/). It's been 4 years since and people are still fixing and updating the script. I've since added my own fixes to this script as well, going as far as to add my own stock ticker because I didn't want to bother clicking to the tabs needed to get to the in game one. As a bonus, it will report your earnings in numbers that actually matter....
+**Options**
+```
+const maxIncome = 1e6;
+const spendPercentage = 0.1;
+```
 
-But this script has problems. First it requires $31b in funds to get up and running. Second, its value as a money maker is completely up to chance. Think of it more of a very long term hedge fund. In early game (meaning 0-10 augments), it will indeed outperform any hacking you do, but once your botnet is in full swing with a decent setup of augments, the stock trends to flatten due to your botnet's influence.
+## stock-bot.js (19.7 GB)
+This script was originally written by [u/havoc_mayhem](https://www.reddit.com/user/havoc_mayhem/) and can be found [here](https://www.reddit.com/r/Bitburner/comments/9o1xle/stock_market_script/). It's been 4 years since and people are still fixing and updating the script. What I've done is re-organized and improved its functionality further. It is now short capable. The profit potential math has been improved. It now has a stock ticker and history of transactions in the log. And it can report its status to the coordinator to manipulate the stock market! This is my go to script for BN8, once getting up to $1q before I finished.
 
 **Requirements:**
+- A WSE Account
 - Access to the TX API ($1b)
 - Access to the 4S Market Data API ($5b)
-- Access to Market Data TIX API ($25b)
+- Access to 4S Market Data TIX ($25b)
+- (Optional) Access to short stocks (be in BN8 or finished BN8.2)
+
+**Options**
+```
+const shortAvailable = true;		// Requires you to be on BN 8.1 or have beaten 8.2
+const fracL = 0.025;			// Fraction of market wealth to keep as cash on player
+const fracH = 0.05;			// Fraction of market wealth vs player money to spend on stocks
+const commission = 100000; 		// Buy or sell commission [DO NOT CHANGE]
+const numCycles = 1; 			// Number of cycles to wait before checking market. Each cycle is 4 seconds.
+const longForecastBuy = 0.55;		// LONG: Projected forecast value at which to buy
+const longForecastSell = 0.5;		// LONG: Projected forecast value at which to sell
+const expProfitLossLong = -0.25; 	// LONG: The percentage difference of profits now compared to when purchased (ie. -25% forecasted profit)
+const shortForecastBuy = 0.45;		// SHORT: Projected forecast value at which to buy
+const shortForecastSell = 0.5;		// SHORT: Projected forecast value at which to sell
+const expProfitGainShort = 0.25;	// SHORT: The percentage difference of profits now compared to when purchased (ie. 25% forecasted profit)
+const transactionLength = 50;		// Will limit the log print specified amount
+```
+
+### About Stock Market Manipulation
+Both stock-bots will automatically try to report the stocks you own to the coordinator. To turn on this feature, go into the coordinator and enable it there before restarting the botnet. Once it is running, the coordinator will reserve the servers used by the public companies add them to the list of money target servers with special flags. The hack-daemons will then decide on their own how to handle them. The hack-daemons will outright ignore these servers until you own a stock in them (either short or long), so please be aware you list of targets will get smaller. 
+
+We only grow if the server is associated with a long stock and has negative projected profits. We only hack if the server is associated with a short stock and has positive project profits. If you continuously grow/hack these servers, your profit gains will cancel out, so we only do these actions and nothing more (aside from weaken).
+
+Note: Most of the servers used by these companies are towards the 1k hacker level range. So while you might have this enabled, if you do not have the required level you will not see any progress (thus the occasional profit loss from normal stock trades)
+
+### Note on Shorts
+Shorts do not follow the normal conventions of profitability. The stock ticker may report negative profits but when the shorts are finally sold due to a market flip or too much potential profits, you'll often see that it gained in profits instead of losing it. I cannot just flip the negative profit value as that is not 100% true either as there are times when it will sell at a loss. Be aware that the log of transactions is there for a reason!
 
 ## stock-bot-v2.js (23.7 GB)
-This script was written by [u/peter_lang](https://www.reddit.com/user/peter_lang/) and his script can be found [here](https://www.reddit.com/r/Bitburner/comments/rsqffz/bitnode_8_stockmarket_algo_trader_script_without/). This script makes full use of shorts and longs found in BitNode 8 and is the best at using actual math to do the job of what a 4S Market Data API and Access would do (saving you $26b). But just like the base stock-bot, this will take time to get up to speed and even then, its down to luck (I rarely see it go beyond $1t with it running on its own until after 18hrs)
+This script was written by [u/peter_lang](https://www.reddit.com/user/peter_lang/) and his script can be found [here](https://www.reddit.com/r/Bitburner/comments/rsqffz/bitnode_8_stockmarket_algo_trader_script_without/). This script makes full use of shorts and longs found in BitNode 8 and is the best at using actual math to do the job of what a 4S Market Data API and Access would do (saving you $26b).  I've since made only minor additions, changing up how it logs information, adding an option to enable shorts, and having it report to the coordinator for possible stock market manipulation.
+
+Note: This script WILL use all your money. Do not try to spend much if you are relying on this solely for money (i.e. BN8)
+
+**Use this script only to gain the money needed to purchase the 4S TIX and API ($30b) so you can run stock-bot.js!** I cannot stress this enough,. This is not a replacement for the OG bot. This is slow. Excruciatingly so. On BN8 where you cannot make any other form of money, this script will take a full 24hrs before it is able to get to that amount (whereas the other can do it in a matter of hours). This is why the script has an option to enable the liquidation of all stocks when it detects it is within the threshold.
 
 **Requirements:**
-- Be on or have finished BitNode 8
+- A WSE Account
+- Access to the TX API ($1b)
+- (Optional) Access to short stocks (be in BN8 or finished BN8.2)
+
+**Options**
+```
+const shortAvailable = true; 	// Requires you to be on BN 8.1 or have beaten 8.2
+const liquidateThresh = 31e9;	// Threshold to alert the player that they have enough to buy 4S API and Data
+const liquidateAtS4 = true;	// Will liquidate all stocks once alerted from above. Must buy 4S API and Data manually
+const samplingLength = 30;	// Length of previous tick samples to use to predict its growth state
+const commission = 100000;	// Buy or sell commission [DO NOT CHANGE]
+```
 
 ## corpo.js (1.02 TB) 
 This beefy script was originally written by [Kamukrass](https://github.com/kamukrass/Bitburner) and can be found [here](https://github.com/kamukrass/Bitburner/blob/develop/corp.js) and has been COMPLTELY rewritten by myself. After 3 days of work, I now have this, a script that will correctly follow [a well known guide](https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing) and do so smartly. Due to the nature of starting a corporation and the price of the APIs required, this is not a set it and forget it script. This **REQUIRES** that you already have a running corporation with actual profits to make full use of this script.

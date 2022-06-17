@@ -18,7 +18,7 @@
 
 const shortAvailable = true;		// Requires you to be on BN 8.1 or have beaten 8.2
 const fracL = 0.025;				// Fraction of market wealth to keep as cash on player
-const fracH = 0.05;					// Fraction of market wealth to spend on stocks
+const fracH = 0.05;					// Fraction of market wealth vs player money to spend on stocks
 const commission = 100000; 			// Buy or sell commission [DO NOT CHANGE]
 const numCycles = 1; 				// Number of cycles to wait before checking market. Each cycle is 4 seconds.
 const longForecastBuy = 0.55;		// LONG: Projected forecast value at which to buy
@@ -26,7 +26,7 @@ const longForecastSell = 0.5;		// LONG: Projected forecast value at which to sel
 const expProfitLossLong = -0.25; 	// LONG: The percentage difference of profits now compared to when purchased (ie. -25% forecasted profit)
 const shortForecastBuy = 0.45;		// SHORT: Projected forecast value at which to buy
 const shortForecastSell = 0.5;		// SHORT: Projected forecast value at which to sell
-const expProfitGainShort = 0.25;	// SHORT: The percentage difference of profits now compared to when purchased (ie. -200% forecasted profit)
+const expProfitGainShort = 0.25;	// SHORT: The percentage difference of profits now compared to when purchased (ie. 25% forecasted profit)
 const transactionLength = 50;		// Will limit the log print specified amount
 
 /** @param {NS} ns */
@@ -274,8 +274,8 @@ function displayLog(ns, stocks, prevTransactions) {
 	ns.print("Stock | ? | #Shares |   Price   |  Bought$  |  $Profit$  | pChange  | pPoten | Forecst");
 	ns.print("---------------------------------------------------------------------------------------");
 
-	var marketValue = 0;
-	var tradeValue = 0;
+	var marketValue = 0, marketValueLong = 0, marketValueShort = 0;
+	var tradeValue = 0, tradeValueLong = 0, tradeValueShort = 0;
 	for (const s of stocks) {
 		if (s.longShares > 0 || s.shortShares > 0) {
 			// Formatted print with character limits and everything.
@@ -289,7 +289,13 @@ function displayLog(ns, stocks, prevTransactions) {
 				, ns.nFormat(percentageChange(s.initProfitPotential, s.profitPotential), "0.00%")
 				, s.profitPotential > 0
 				, ns.nFormat(s.forecast, "0.00"));
+			
+			marketValueLong += (s.bidPrice * s.longShares);
+			marketValueShort += (s.askPrice * s.shortShares);
 			marketValue += (s.bidPrice * s.longShares) + (s.askPrice * s.shortShares);
+
+			tradeValueLong += (s.longPrice * s.longShares);
+			tradeValueShort += (s.shortPrice * s.shortShares);
 			tradeValue += (s.longPrice * s.longShares) + (s.shortPrice * s.shortShares);
 		}
 	}
@@ -298,7 +304,7 @@ function displayLog(ns, stocks, prevTransactions) {
 	ns.print(" ");
 	ns.print(`INFO | Total Amount Spent: ${ns.nFormat(tradeValue, "$0.000a")}`);
 	ns.print(`INFO | Total Market Value: ${ns.nFormat(marketValue, "$0.000a")}`);
-	ns.print(`INFO | Total Profits: ${ns.nFormat(marketValue - tradeValue, "$0.000a")}`)
+	ns.print(`INFO | Total Profits: ${ns.nFormat(marketValue - tradeValue, "$0.000a")} | Longs: ${ns.nFormat(marketValueLong - tradeValueLong, "$0.000a")} | Shorts: ${ns.nFormat(marketValueShort - tradeValueShort, "$0.000a")}`)
 	//ns.print(`INFO | Run Spent: ${ns.nFormat(spent, "$0.000a")} | Run Recouped: ${ns.nFormat(recouped, "$0.000a")} | Run Revenue: ${ns.nFormat(recouped - spent, "$0.000a")}`);
 }
 

@@ -17,8 +17,8 @@
 export async function main(ns) {
 	
 	/** OPTIONS */
-	let maxIncome = 1e9;
-	let spendPercentage = 0.1;
+	const maxIncome = 1e9;
+	const spendPercentage = 0.1;
 
 	if (ns.args.length)
 		maxIncome = parseInt(ns.args[0]);
