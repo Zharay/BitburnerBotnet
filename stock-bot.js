@@ -45,7 +45,7 @@ export async function main(ns) {
 		
 		//Sell under performing shares
 		for (const stock of stocks) {
-			// Handle Longs
+			// Sell Longs
 			if (stock.longShares > 0 
 				&& (percentageChange(stock.initProfitPotential, stock.profitPotential) <= expProfitLossLong 
 					|| stock.profitPotential <= 0 || stock.forecast < longForecastSell)) {	
@@ -55,7 +55,7 @@ export async function main(ns) {
 				corpus -= commission;
 			}
 
-			// Handle Shorts
+			// Begin Sell Shorts
 			if (stock.shortShares > 0 && shortAvailable
 				&& (percentageChange(stock.initProfitPotential, stock.profitPotential) > expProfitGainShort 
 					|| stock.profitPotential > 0 || stock.forecast > shortForecastSell)) {
@@ -64,6 +64,7 @@ export async function main(ns) {
 				stock.shortShares = 0;
 				corpus -= commission;
 			}
+			// End Sell Shorts
 		}
 		
 		//Sell shares (long) if not enough cash in hand
@@ -86,7 +87,6 @@ export async function main(ns) {
             let cashToSpend = ns.getServerMoneyAvailable("home") - (fracH * corpus);
 			if (stock.forecast > longForecastBuy) {
 				// Attempt to buy a long. Only do so if it's not at a loss (due to commission)
-            	if (stock.longShares > 0) continue;
 				let numShares = Math.min(stock.maxShares, Math.floor((cashToSpend - commission) / stock.askPrice));
 				let condition =  numShares * stock.profitPotential * stock.price * numCycles;
 				if (condition > commission) {
@@ -95,17 +95,17 @@ export async function main(ns) {
 				}
 			}
 
-			// Grab the stock from back to front - Shorts need least profit potential
+			// Buy Shorts - Grab the stock from back to front - Shorts need least profit potential
 			stock = stocks[stocks.length - 1 - i];
 			cashToSpend = ns.getServerMoneyAvailable("home") - (fracH * corpus);
 			if (stock.forecast < shortForecastBuy && shortAvailable) {
 				// Attempt to buy a short. We don't care if it's at a loss (that's the point?)
-				if (stock.shortShares > 0) continue;
 				let numShares = Math.min(stock.maxShares, Math.floor((cashToSpend - commission) / stock.bidPrice));
 				let condition =  numShares * stock.profitPotential * stock.bidPrice * numCycles;
 				let price = ns.stock.short(stock.sym, numShares) * numShares;
 				if (price > 0) prevTrans.push(copyStock(stock, "", false, numShares, condition, price));
 			}
+			// End Buy Shorts
         }
 
 		refreshStocks(ns, stocks);
@@ -154,9 +154,9 @@ function refreshStocks(ns, stocks) {
 		// Basic Info
 		stocks[i].price = ns.stock.getPrice(sym);
 		stocks[i].longShares = ns.stock.getPosition(sym)[0];	// Number of longs we own
-		stocks[i].longPrice = ns.stock.getPosition(sym)[1];		// Price we bought longs at
+		stocks[i].longPrice = ns.stock.getPosition(sym)[1];		// Price we bought longs at (weighted average)
 		stocks[i].shortShares = ns.stock.getPosition(sym)[2];	// Number of shorts we own
-		stocks[i].shortPrice = ns.stock.getPosition(sym)[3];	// Price we bought shorts at
+		stocks[i].shortPrice = ns.stock.getPosition(sym)[3];	// Price we bought shorts at (weighted average)
 		stocks[i].maxShares = ns.stock.getMaxShares(sym);		// Shares available
 		stocks[i].volatility = ns.stock.getVolatility(sym);
 		stocks[i].forecast = ns.stock.getForecast(sym);
