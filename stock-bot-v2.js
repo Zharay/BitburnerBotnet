@@ -20,6 +20,7 @@ const shortAvailable = true; 	// Requires you to be on BN 8.1 or have beaten 8.2
 const liquidateThresh = 31e9;	// Threshold to alert the player that they have enough to buy 4S API and Data
 const liquidateAtS4 = true;		// Will liquidate all stocks once alerted from above. Must buy 4S API and Data manually
 const samplingLength = 30;		// Length of previous tick samples to use to predict its growth state
+const spendAmount = 0.5;		// Amount of your total cash you will spend
 const commission = 100000;		// Buy or sell commission [DO NOT CHANGE]
 
 function predictState(samples) {
@@ -146,7 +147,7 @@ export async function main(ns) {
 					ns.print(`S ${sym} (${ratio}): ${format(profit+cost)} / ${format(profit)} (${Math.round(profit/cost*10000)/100}%)`);
 				}
 			} else {
-				const money = ns.getServerMoneyAvailable("home");
+				const money = ns.getServerMoneyAvailable("home") * spendAmount;
 				if (state > 0) {
 					const sharesToBuy = Math.min(10000, ns.stock.getMaxShares(sym), Math.floor((money - commission) / askPrice));
 					if (ns.stock.buy(sym, sharesToBuy) > 0) {

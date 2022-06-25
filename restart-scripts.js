@@ -21,6 +21,7 @@ export async function main(ns) {
 	const runHacknetMgr = false;
 	const runBuyServer = false;
 	const runCorpo = false;
+	const runHackGang = false;
 	const enableShare = false;
 
 	// First kill all process on home machine except this script and stock-bot
@@ -28,15 +29,18 @@ export async function main(ns) {
 	var processes = ns.ps();
 	var isStockBot = false;
 	var isCorpo = false;
+	var isGang = false;
 	processes.forEach( function(x) {
 		if (x.filename != "restart-scripts.js" 
 				&& x.filename != "stock-bot.js" && x.filename != "stock-bot-v2.js"
-				&& x.filename != "corpo.js")
+				&& x.filename != "corpo.js" && x.filename != "gang-nullsec.js")
 			ns.kill(x.pid);
 		else if (x.filename == "stock-bot.js" || x.filename == "stock-bot-v2.js")
 			isStockBot = true;
 		else if (x.filename == "corpo.js")
 			isCorpo = true;
+		else if (x.filename == "gang-nullsec.js")
+			isGang = true;
 	} );
 
 	// We can make use port 2 to kill any servers running a hack-daemon!
@@ -85,6 +89,12 @@ export async function main(ns) {
 	if (!isCorpo && runCorpo) {
 		ns.tprint("Starting Corpo Script...");
 		ns.run("corpo.js", 1);
+	}
+
+	// Gang script goes here
+	if (!isGang && runHackGang) {
+		ns.tprint("Starting Gang Script...");
+		ns.run("gang-nullsec.js", 1);
 	}
 
 	// Spread the jank

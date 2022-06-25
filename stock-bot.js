@@ -89,7 +89,7 @@ export async function main(ns) {
 				// Attempt to buy a long. Only do so if it's not at a loss (due to commission)
 				let numShares = Math.min(stock.maxShares, Math.floor((cashToSpend - commission) / stock.askPrice));
 				let condition =  numShares * stock.profitPotential * stock.price * numCycles;
-				if (condition > commission) {
+				if (condition > commission * 2) {
 					let price = ns.stock.buy(stock.sym, numShares) * numShares;
 					if (price > 0) prevTrans.push(copyStock(stock, "", true, numShares, condition, price));
 				}
@@ -101,9 +101,11 @@ export async function main(ns) {
 			if (stock.forecast < shortForecastBuy && shortAvailable) {
 				// Attempt to buy a short. We don't care if it's at a loss (that's the point?)
 				let numShares = Math.min(stock.maxShares, Math.floor((cashToSpend - commission) / stock.bidPrice));
-				let condition =  numShares * stock.profitPotential * stock.bidPrice * numCycles;
-				let price = ns.stock.short(stock.sym, numShares) * numShares;
-				if (price > 0) prevTrans.push(copyStock(stock, "", false, numShares, condition, price));
+				let condition =  numShares * stock.bidPrice * numCycles;
+				if (condition > commission * 2) {
+					let price = ns.stock.short(stock.sym, numShares) * numShares;
+					if (price > 0) prevTrans.push(copyStock(stock, "", false, numShares, condition, price));
+				}
 			}
 			// End Buy Shorts
         }
@@ -245,23 +247,23 @@ function copyStock(stock, saleType, isLong, transAmount, condition, transSum) {
  */
 function displayLog(ns, stocks, prevTransactions) {
 	ns.clearLog();
-
+	
 	// Start by printing out our previous sales
 	var recouped = 0;
 	var spent = 0;
 	
-	prevTransactions.sort((a, b) => b.transTime - a.transTime);
+	//prevTransactions.sort((a, b) => b.transTime - a.transTime);
 
 	for (let i = Math.max(prevTransactions.length - transactionLength, 0); i < prevTransactions.length; i++) {
 		let trans = prevTransactions[i];
 		let time = ns.tFormat(trans.transTime).replace(" hours", "h").replace(" minutes", "m").replace(" seconds", "s");
 		// WARN | Sold [SYM] TYPE for {profit} ({time}) [{pChage} | {ProfitPot} | {Forecast}]
-		// INFO | Bought [SYM] TYPE for {amount} ({time}) [{forecast} | {Condition$}]
+		// INFO | Bought [SYM] TYPE for {amount} ({time}) [{Condition$} | {forecast}]
 		if (trans.saleType != "") {
-			ns.print(`${trans.saleType == "cash"  ? "ERROR | Shedded" : "WARN | Sold"} ${ns.nFormat(trans.transAmount,"0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.profit, "$0.00a")} profit (${time} ago) [C:${ns.nFormat(trans.condition, "0.00%")} | P:${trans.profitPotential > 0} | F:${ns.nFormat(trans.forecast, "0.00")}]`);
+			ns.print(`${trans.saleType == "cash"  ? "ERROR | Shedded" : "WARN | Sold"} ${ns.nFormat(trans.transAmount,"0.0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.profit, "$0.00a")} profit (${time} ago) [C:${ns.nFormat(trans.condition, "0.00%")} | P:${trans.profitPotential > 0} | F:${ns.nFormat(trans.forecast, "0.00")}]`);
 			recouped += trans.profit;
 		} else {
-			ns.print(`INFO | Bought ${ns.nFormat(trans.transAmount,"0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.transSum, "$0.00a")} (${time} ago) [${trans.transLong ? "C:" + ns.nFormat(trans.condition, "$0.00a") : "P:" + trans.profitPotential > 0} | F:${ns.nFormat(trans.forecast, "0.000")}]`);
+			ns.print(`INFO | Bought ${ns.nFormat(trans.transAmount,"0.0a")} [${trans.sym}] ${trans.transLong ? "LONG" : "SHORT"} for ${ns.nFormat(trans.transSum, "$0.00a")} (${time} ago) [C:${ns.nFormat(trans.condition, "$0.00a")} | F:${ns.nFormat(trans.forecast, "0.000")}]`);
 			spent += trans.transSum;
 		}
 		trans.transTime += 4 * 1000 * numCycles;
@@ -282,7 +284,7 @@ function displayLog(ns, stocks, prevTransactions) {
 			ns.printf("%-5s | %s | %-7s | %-9s | %-9s | %-10s | %-8s | %-6s | %s"
 				, s.sym
 				, s.longShares > 0 ? "L" : "S"
-				, ns.nFormat(s.longShares > 0 ? s.longShares : s.shortShares, "0a")
+				, ns.nFormat(s.longShares > 0 ? s.longShares : s.shortShares, "0.0a")
 				, ns.nFormat(s.longShares > 0 ? s.bidPrice : s.askPrice, "$0.00a")
 				, ns.nFormat(s.longShares > 0 ? s.longPrice : s.shortPrice, "$0.00a")
 				, ns.nFormat(s.longShares > 0 ? (s.bidPrice * s.longShares) - ((s.longPrice * s.longShares)) : (s.askPrice * s.shortShares) - ((s.shortPrice * s.shortShares)), "$0.00a")

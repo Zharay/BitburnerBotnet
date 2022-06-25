@@ -18,10 +18,10 @@
 
 /** Options */
 const debug = false;				// Enables more text information in console log
-const maxEmployees = 420;			// Max employees the main production company will go to (satellite offices are -60 this)
-const timeBetweenHires = 5*60*1000;	// (ms) Time to wait between hiring employees.
 const mainLoopTime = 1000;			// (ms) Time to wait between of corpo script
+const timeBetweenHires = 5*60*1000;	// (ms) Time to wait between hiring employees.
 const marketRefreshTime = 2500;		// (ms) Time to wait between checking of market price (this changes with upgrades!)
+const maxEmployees = 420;			// Max employees the main production company will go to (satellite offices are -60 this)
 const warehouseFillUp = 0.60;		// Percentage of warehouse usage to check against. If its greater, upgrade size
 const shedProdAtFill = 0.80;		// Percentage of product filling the warehouse that is allowed before we shed all stock.
 
@@ -105,7 +105,7 @@ export async function main(ns) {
 				// Set all employees back to their positions and as quickly as possible set the sales back to normal
 				// Immediately go back to Find Investors. You should get $210b or so as an offer!
 
-		// Increase Office to 9 and set employees to 2 in each sector except Business (leave at 1) ($160b left)
+		// Increase Office to 9 and set employees to 2 in each sector except Business (leave at 1) and Training (always 0) ($160b left)
 		// Upgrade Smart Factories and Smart Storage to 10 ($110b left)
 		// Upgrade Warehouses to 2k ($45b left or more if you did the investor trick)
 
@@ -114,14 +114,16 @@ export async function main(ns) {
 		// Will end up with little to no funds after
 
 		// Find Investor for $5t for 10% stock.
-			// Once again, if you are not on BN3 then it'll be half this. Do the trick mentioned to double it.
-
+			// Once again, if you are not getting no where this amount then do the trick mentioned above.
+		
+		// Upgrade Warehouses to 3.8k
 		// Obtain at each city: 9.3k Hardware, 726 Robots, 6.27k AI Cores, 230.4k Real Estate 
 			// ACTUAL VALUES (one 10sec tick) = Hardware: 650 | Robots: 63 | AI Cores: 375 | Real Estate: 8400
 		// Will end up with $4.8b, 500~ Production, and $32m/sec in Profits. Very Nice.
+		// Even better, you should have plenty left over to start this script!
 
 		// NOW YOU ARE READY TO USE THIS SCRIPT.
-		// Just give it some time first to generate some funds!
+		// Note: You are free to expand into Healthcare and go public when you feel like. The script will handle everything from here.
 
 		ns.alert("Corpo.js requires that you manage the company yourself for its starting capitol! Please follow the guide found in corpo.js!");
 	}
@@ -283,7 +285,7 @@ function handleUpgrades(ns) {
 		var lowestPerformer = "";
 		var lowestMP = 0;
 		for (var productName of division.products) {
-			if (!ns.corporation.getProduct(division.name, productName).sCost.includes("*") && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
+			if (ns.corporation.getProduct(division.name, productName).sCost && !ns.corporation.getProduct(division.name, productName).sCost.includes("*") && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
 				ns.print(`[${division.name}] Oops. ${productName} finished before setting its price. Skipping discontinue sequence.`);
 				return;
 			}
@@ -703,7 +705,7 @@ async function initCities(ns, division, productCity = "Aevum") {
  */
 async function waitForFunds(ns, cost) {
 	if ((ns.corporation.getCorporation().funds) < cost)
-		ns.print('Not enough money. Waiting for funds to reach: ' + ns.nFormat(ns.getCorporation().funds, "$0.00a") + ' / ' + ns.nFormat(cost, "$0.00a"));
+		ns.print('Not enough money. Waiting for funds to reach: ' + ns.nFormat(ns.corporation.getCorporation().funds, "$0.00a") + ' / ' + ns.nFormat(cost, "$0.00a"));
 
 	while ((ns.corporation.getCorporation().funds) < cost)
 		await ns.sleep(1000);

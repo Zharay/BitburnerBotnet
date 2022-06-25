@@ -61,7 +61,7 @@ These are the exact steps I took starting BitNode1.2 without any augmentations. 
 ### Long Term Notes
 Eventually you'll notice reduction of threads on your targets. This is 100% normal. Notice the security levels and money. Once you have enough RAM, your botnet can easily maintain a balance where everything is within a sweet spot, constantly generating money for you. There is nothing more for you to do except narrow down your targets by increasing minServerMoney and minServerGrowth.
 
-### Hacking Beyond BN1
+### Hacking Beyond BN-1
 Eventually the game will open up new paths of revenue, different ways to beat the game, and even a new stat. However, the one constant that you'll almost always need is a running botnet. Whether it is generating money or not, so long as you have every system doing something, you will gain from it.
 
 # Preface
@@ -90,7 +90,7 @@ In practice this is a lot more complicated than it seems. I spent days getting t
 Each script serves a specific purpose, the core of which are essential for everything to work.
 
 ## coordinator.js (4.95 GB)
-The heart of the botnet and the handler of nearly all the ports used. Uses heavy use of JSON objects to keep a log of everything going on. This can be ran solo without restart-scripts but you must pass it a list of all servers deliminated by a comma [,] or semicolon [;]. Due to how much information this script must handle, time is always an issue. In fact, it can be considered a bottleneck. By default it is set to a very generous 1000ms, but it can run smoothly even at 500ms. Keep your (real) processor's capabilities into account when lowering this option!
+The heart of the botnet and the handler of nearly all the ports used. Uses heavy use of JSON objects to keep a log of everything going on. This can be ran solo without restart-scripts but you must pass it a list of all servers delimitated by a comma [,] or semicolon [;]. Due to how much information this script must handle, time is always an issue. In fact, it can be considered a bottleneck. By default it is set to a very generous 1000ms, but it can run smoothly even at 500ms. Keep your (real) processor's capabilities into account when lowering this option!
 
 For information on all the ports, visit the [wiki](https://github.com/Zharay/BitburnerBotnet/wiki)!
 
@@ -254,28 +254,30 @@ const spendPercentage = 0.1;
 ```
 
 ## stock-bot.js (19.7 GB)
-This script was originally written by [u/havoc_mayhem](https://www.reddit.com/user/havoc_mayhem/) and can be found [here](https://www.reddit.com/r/Bitburner/comments/9o1xle/stock_market_script/). It's been 4 years since and people are still fixing and updating the script. What I've done is re-organized and improved its functionality further. It is now short capable. The profit potential math has been improved. It now has a stock ticker and history of transactions in the log. And it can report its status to the coordinator to manipulate the stock market! This is my go to script for BN8, once getting up to $1q before I finished.
+This script was originally written by [u/havoc_mayhem](https://www.reddit.com/user/havoc_mayhem/) and can be found [here](https://www.reddit.com/r/Bitburner/comments/9o1xle/stock_market_script/). It's been 4 years since and people are still fixing and updating the script. What I've done is re-organized and improved its functionality further. It is now short capable. The profit potential math has been improved. It now has a stock ticker and history of transactions in the log. And it can report its status to the coordinator to manipulate the stock market! This is my go to script for BN-8, once getting up to $1q before I finished.
+
+![stock-bot ticker!](/ss/Screenshot5.jpg)
 
 **Requirements:**
 - A WSE Account
 - Access to the TX API ($1b)
 - Access to the 4S Market Data API ($5b)
 - Access to 4S Market Data TIX ($25b)
-- (Optional) Access to short stocks (be in BN8 or finished BN8.2)
+- (Optional) Access to short stocks (be in BN-8 or finished BN-8.2)
 
 **Options**
 ```
-const shortAvailable = true;		// Requires you to be on BN 8.1 or have beaten 8.2
+const shortAvailable = true;		// Requires you to be on BN-8.1 or have beaten BN-8.2
 const fracL = 0.025;			// Fraction of market wealth to keep as cash on player
 const fracH = 0.05;			// Fraction of market wealth vs player money to spend on stocks
 const commission = 100000; 		// Buy or sell commission [DO NOT CHANGE]
 const numCycles = 1; 			// Number of cycles to wait before checking market. Each cycle is 4 seconds.
 const longForecastBuy = 0.55;		// LONG: Projected forecast value at which to buy
 const longForecastSell = 0.5;		// LONG: Projected forecast value at which to sell
-const expProfitLossLong = -0.25; 	// LONG: The percentage difference of profits now compared to when purchased (ie. -25% forecasted profit)
+const expProfitLossLong = -0.25; 	// LONG: The percentage difference of profits now compared to when purchased (ie. -25% forecast profit)
 const shortForecastBuy = 0.45;		// SHORT: Projected forecast value at which to buy
 const shortForecastSell = 0.5;		// SHORT: Projected forecast value at which to sell
-const expProfitGainShort = 0.25;	// SHORT: The percentage difference of profits now compared to when purchased (ie. 25% forecasted profit)
+const expProfitGainShort = 0.25;	// SHORT: The percentage difference of profits now compared to when purchased (ie. 25% forecast profit)
 const transactionLength = 50;		// Will limit the log print specified amount
 ```
 
@@ -292,36 +294,76 @@ Shorts do not follow the normal conventions of profitability. The stock ticker m
 ## stock-bot-v2.js (23.7 GB)
 This script was written by [u/peter_lang](https://www.reddit.com/user/peter_lang/) and his script can be found [here](https://www.reddit.com/r/Bitburner/comments/rsqffz/bitnode_8_stockmarket_algo_trader_script_without/). This script makes full use of shorts and longs found in BitNode 8 and is the best at using actual math to do the job of what a 4S Market Data API and Access would do (saving you $26b).  I've since made only minor additions, changing up how it logs information, adding an option to enable shorts, and having it report to the coordinator for possible stock market manipulation.
 
-Note: This script WILL use all your money. Do not try to spend much if you are relying on this solely for money (i.e. BN8)
+Note: This script WILL use all your money. Do not try to spend much if you are relying on this solely for money (i.e. BN-8)
 
 **Use this script only to gain the money needed to purchase the 4S TIX and API ($30b) so you can run stock-bot.js!** I cannot stress this enough,. This is not a replacement for the OG bot. This is slow. Excruciatingly so. On BN8 where you cannot make any other form of money, this script will take a full 24hrs before it is able to get to that amount (whereas the other can do it in a matter of hours). This is why the script has an option to enable the liquidation of all stocks when it detects it is within the threshold.
 
 **Requirements:**
 - A WSE Account
 - Access to the TX API ($1b)
-- (Optional) Access to short stocks (be in BN8 or finished BN8.2)
+- (Optional) Access to short stocks (be in BN-8 or have BN-8.2)
 
 **Options**
 ```
-const shortAvailable = true; 	// Requires you to be on BN 8.1 or have beaten 8.2
+const shortAvailable = true; 	// Requires you to be on BN-8.1 or have beaten BN-8.2
 const liquidateThresh = 31e9;	// Threshold to alert the player that they have enough to buy 4S API and Data
 const liquidateAtS4 = true;	// Will liquidate all stocks once alerted from above. Must buy 4S API and Data manually
 const samplingLength = 30;	// Length of previous tick samples to use to predict its growth state
+const spendAmount = 0.5;	// Amount of your total cash you will spend
 const commission = 100000;	// Buy or sell commission [DO NOT CHANGE]
 ```
 
 ## corpo.js (1.02 TB) 
-This beefy script was originally written by [Kamukrass](https://github.com/kamukrass/Bitburner) and can be found [here](https://github.com/kamukrass/Bitburner/blob/develop/corp.js) and has been COMPLTELY rewritten by myself. After 3 days of work, I now have this, a script that will correctly follow [a well known guide](https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing) and do so smartly. Due to the nature of starting a corporation and the price of the APIs required, this is not a set it and forget it script. This **REQUIRES** that you already have a running corporation with actual profits to make full use of this script.
+This beefy script was originally written by [Kamukrass](https://github.com/kamukrass/Bitburner) and can be found [here](https://github.com/kamukrass/Bitburner/blob/develop/corp.js) and has been COMPLETELY rewritten by myself. After 3 days of work, I now have this, a script that will correctly follow [a well known guide](https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing) and do so smartly. Due to the nature of starting a corporation and the price of the APIs required, this is not a set it and forget it script. This **REQUIRES** that you already have a running corporation with actual profits to make full use of this script.
 
 Honestly, this script will require its own page of information to describe everything it does. But the gist is that it will create a Tobacco division and fully automate its management from there. It can increase office size and assign employees. It will completely manage all your upgrades and research. It will make new products, figure out their optimal market price (until you unlock Market-TA.I and II), and repeat the process. It will even handle any new division you add that can create products (though for now only Healthcare) and do the same thing Tobacco does all over again.
 
 Only downside: It has a hefty **1 Terabyte RAM** requirement.
 
 **Requirements:**
+- Access to Corporations (BN-3 or Source-File 3)
 - $150b (personal) to create a corporation
 - 1TB of RAM
 - A starting business division [**Follow this guide!!**](https://docs.google.com/document/d/15hN60PmzmpXpT_JC8z_BU47gaZftAx4zaOnWAOqwoMw/edit?usp=sharing)
 - Office and Warehouse APIs ($100b corp funds)
+
+**Options**
+```
+const debug = false;				// Enables more text information in console log
+const mainLoopTime = 1000;			// (ms) Time to wait between of corpo script
+const timeBetweenHires = 5*60*1000;	// (ms) Time to wait between hiring employees.
+const marketRefreshTime = 2500;		// (ms) Time to wait between checking of market price (this changes with upgrades!)
+const maxEmployees = 420;			// Max employees the main production company will go to (satellite offices are -60 this)
+const warehouseFillUp = 0.60;		// Percentage of warehouse usage to check against. If its greater, upgrade size
+const shedProdAtFill = 0.80;		// Percentage of product filling the warehouse that is allowed before we shed all stock.
+
+/*Not included above: upgradeList and researchList. They both allow you to specify the priority of upgrades and research*/
+```
+
+## gang-nullsec.js (30.8 GB)
+A stand-alone script of my own making. This is for managing and maintaining a hacker gang the best it can, ignoring territory warfare as in the long run it is not at all necessary. Why a hacker gang? Cause I'm a programmer, not a brute! Honestly though, this does not beat out other means of income (especially if you have a corporation), but in the early game of BitNode-2, this will easily get you on your feet.
+
+**Differences of a Hacker Gang vs. a Regular One:**
+- You only need to get into a hacking faction (don't need to perform physical crimes)
+- Grunts only care about hacking and a bit of charisma.
+- You can still perform gang warfare, but its completely optional (does provide bonus to income, however)
+- Character growth is explosive with ascension as you are only looking at the hacking stat.
+- Slower ramp up than a regular gang.
+
+**Requirements:**
+- Access to Gangs (BN-2)
+- Be in either NiteSec (backdoor "avmnite-02h") or The Black Hand (backdoor "I.I.I.I")
+- Formulas API (for now?)
+
+**Options**
+```
+const useFormulas = true;           // Will use functions that require Formulas API [Currently REQUIRED] 
+const spendAmount = 0.2;            // Multiplier of player's money to spend
+const maxWantedGain = 0;            // Maximum wanted level gained per tick
+const initialHackLevel = 120;       // New recruits will train to this amount of hacking
+const ascensionMultiThresh = 1.5;   // The hacking multiplier threshold we wait for before ascending grunts
+const trainToMod = 0.5;             // After ascension, train to previous hack level * modifier
+```
 
 ## getServerStatus.js (2.2 GB)
 A terminal only script that you can use to get all the information you'll need a one or more servers. I find this to be more informative than any built in exe you can create and it can give you information that'd be useful for your botnet. Just run the command below in the terminal along with the money threshold (0.75) and the host names separated by spaces between each.
